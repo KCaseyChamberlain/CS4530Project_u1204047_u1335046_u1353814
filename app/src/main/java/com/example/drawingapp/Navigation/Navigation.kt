@@ -9,8 +9,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.NavHostController
 import com.example.drawingapp.screens.DrawingScreen
 import com.example.drawingapp.screens.SplashScreen
-import com.example.navigationdemo.screens.HomeScreen
-import com.example.navigationdemo.screens.ProfileScreen
 
 @Composable
 fun AppNavHost(navController: NavHostController, startDestination: String="home")
