@@ -12,7 +12,7 @@ class CanvasDrawer (
     val bitmap: Bitmap = createBitmap(width, width)
     private val canvas: Canvas = Canvas(bitmap)
 
-    val penShapes = listOf("Circle", "Square")
+    val penShapes = listOf("Circle", "Square", "Line")
     //figure out what to do with other shapes later...
     var penShape = penShapes[0]
 
@@ -23,6 +23,9 @@ class CanvasDrawer (
         style = Paint.Style.STROKE
         isAntiAlias = true
     }
+    // Points used to draw a solid line.
+    private var lastX: Float? = null
+    private var lastY: Float? = null
 
     init {
         clear()
@@ -33,6 +36,11 @@ class CanvasDrawer (
         canvas.drawColor(Color.WHITE)
     }
 
+    // Used so the line doesn't keep connecting after each drag.
+    fun resetLine(){
+        lastX = null
+        lastY = null
+    }
     //call when user changes pen size
     fun setPenSize(size: Float){
         drawing.strokeWidth = size
@@ -56,6 +64,13 @@ class CanvasDrawer (
                 x,
                 y,
                 drawing.strokeWidth / 2, drawing)
+            "Line" -> {
+                if (lastX != null && lastY != null) {
+                    canvas.drawLine(lastX!!, lastY!!, x, y, drawing)
+                }
+                lastX = x
+                lastY = y
+            }
         }
     }
 

@@ -1,5 +1,6 @@
 package com.example.drawingapp.screens
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
@@ -17,16 +18,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.drawingapp.CanvasDrawer
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.sp
+import com.example.drawingapp.ui.theme.background
+import com.example.drawingapp.ui.theme.primary
+import com.example.drawingapp.ui.theme.secondary
+import com.example.drawingapp.ui.theme.textColor
 
 
 @Composable
 fun DrawingScreen(navController: NavHostController){
     //placeholder pen menu
-    val penOptions = listOf("Pen 1", "Pen 2", "Pen 3")
+    val penOptions = listOf("Circle", "Square", "Line")
     var droppedDown by remember { mutableStateOf(false) }
     var selectedPen by rememberSaveable {mutableStateOf(penOptions[0])}
+    // Pen size state
+    var penSize by rememberSaveable { mutableFloatStateOf(10f) }
 
     //uses CanvasDrawer class, and copies bitmap so it can be redrawn every time a change is made
     val canvasDrawer = remember { CanvasDrawer(1000) }
@@ -35,6 +45,7 @@ fun DrawingScreen(navController: NavHostController){
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(background)
             .padding(12.dp)
     ) {
         //drop down pen menu, very basic
@@ -44,13 +55,20 @@ fun DrawingScreen(navController: NavHostController){
         //
         Row(
             modifier = Modifier
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
+                .fillMaxWidth()
+                .background(secondary)
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+
         ){
             //when pressed, droppedDown is true, and it shows the list of pens.
             Box {
                 TextButton(onClick = {droppedDown = true}) {
-                    Text(selectedPen)
+                    Text(selectedPen ,
+                        color = textColor,
+                        fontSize = 25.sp
+                    )
                 }
 
                 DropdownMenu(
@@ -62,11 +80,26 @@ fun DrawingScreen(navController: NavHostController){
                             text = {Text(pen)},
                             onClick = {
                                 selectedPen = pen
+                                canvasDrawer.penShape = pen
                                 droppedDown = false
                             }
                         )
                     }
                 }
+            }
+
+            // Slider for pen size
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Size: ${penSize.toInt()}",
+                    color = textColor)
+                Slider(
+                    value = penSize,
+                    onValueChange = { newSize ->
+                        penSize = newSize
+                    },
+                    valueRange = 1f..50f, // min/max pen size
+                    modifier = Modifier.width(150.dp)
+                )
             }
         }
     }
@@ -90,13 +123,18 @@ fun DrawingScreen(navController: NavHostController){
                             canvasDrawer.drawPen(
                                 point.x,
                                 point.y)
+                            canvasDrawer.setPenSize(penSize)
                             bitmap = canvasDrawer.copyBitmap()
                         },
                         onDrag = { change, point ->
                             canvasDrawer.drawPen(
                                 change.position.x,
                                 change.position.y)
+                            canvasDrawer.setPenSize(penSize)
                             bitmap = canvasDrawer.copyBitmap()
+                        },
+                        onDragEnd = {
+                            canvasDrawer.resetLine()
                         }
                     )
                 }
