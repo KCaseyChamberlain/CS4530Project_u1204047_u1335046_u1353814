@@ -3,8 +3,10 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import androidx.compose.ui.graphics.asImageBitmap
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.core.graphics.createBitmap
+import androidx.compose.ui.graphics.toArgb
 
 class CanvasDrawer (
     private val width: Int
@@ -47,8 +49,9 @@ class CanvasDrawer (
     }
 
     //call when user changes pen color
-    fun setPenColor(color: Int){
-        drawing.color = color
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun setPenColor(color: androidx.compose.ui.graphics.Color){
+        drawing.color = color.toArgb()
     }
 
     //this is called on the DrawingScreen. different pen shapes change what is being drawn,
