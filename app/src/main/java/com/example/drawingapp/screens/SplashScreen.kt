@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.drawingapp.R
 import kotlinx.coroutines.delay
+import androidx.compose.ui.platform.testTag
 
 
 @Composable
@@ -49,8 +50,10 @@ fun SplashScreen(onTimeout: () -> Unit) {
     }
 
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize()
+            .testTag("splash"),
         contentAlignment = Alignment.Center
+
     ) {
         AnimatedVisibility(
             visible = visible,

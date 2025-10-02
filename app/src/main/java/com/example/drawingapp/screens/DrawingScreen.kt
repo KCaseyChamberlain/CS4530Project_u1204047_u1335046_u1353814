@@ -34,6 +34,7 @@ import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import androidx.compose.ui.platform.testTag
 
 class DrawingViewModel : ViewModel() {
     val canvasDrawer = CanvasDrawer(width = 1000)
@@ -86,6 +87,7 @@ fun DrawingScreen(navController: NavHostController) {
             .fillMaxSize()
             .background(background)
             .padding(12.dp)
+            .testTag("draw")
     ) {
         // user config options
         Row(

@@ -8,6 +8,12 @@
       <SelectionState runConfigName="pen_size_changes_when_slider_moves()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
+      <SelectionState runConfigName="app_shows_splash_then_navigates_to_draw()">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="draw_changes_bitmap_pixels()">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
     </selectionStates>
   </component>
 </project>
