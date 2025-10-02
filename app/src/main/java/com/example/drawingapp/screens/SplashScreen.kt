@@ -10,7 +10,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,7 +25,6 @@ import com.example.drawingapp.R
 import kotlinx.coroutines.delay
 import androidx.compose.ui.platform.testTag
 
-
 @Composable
 fun SplashScreen(navController: NavHostController) {
     SplashScreen(
@@ -35,7 +33,6 @@ fun SplashScreen(navController: NavHostController) {
         }
     )
 }
-
 
 @Composable
 fun SplashScreen(onTimeout: () -> Unit) {

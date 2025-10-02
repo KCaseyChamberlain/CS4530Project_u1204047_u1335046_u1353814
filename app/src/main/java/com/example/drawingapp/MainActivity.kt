@@ -8,7 +8,6 @@ import androidx.navigation.compose.rememberNavController
 import com.example.drawingapp.ui.theme.DrawingAppTheme
 import com.example.navigationdemo.Navigation.AppNavHost
 
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

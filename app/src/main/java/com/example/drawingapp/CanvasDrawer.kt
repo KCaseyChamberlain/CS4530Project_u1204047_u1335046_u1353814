@@ -1,4 +1,5 @@
 package com.example.drawingapp
+
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Bitmap
