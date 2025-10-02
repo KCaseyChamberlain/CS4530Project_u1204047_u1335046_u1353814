@@ -19,7 +19,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.drawingapp.CanvasDrawer
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -31,28 +30,56 @@ import com.example.drawingapp.ui.theme.secondary
 import com.example.drawingapp.ui.theme.textColor
 import com.github.skydoves.colorpicker.compose.HsvColorPicker
 import com.github.skydoves.colorpicker.compose.rememberColorPickerController
+import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 
 class DrawingViewModel : ViewModel() {
-    val canvasDrawer = CanvasDrawer(1000)
-    var bitmap by mutableStateOf(canvasDrawer.copyBitmap())
+    val canvasDrawer = CanvasDrawer(width = 1000)
+
+    data class PenState(
+        val color: Color = Color.Black,
+        val size: Float = 10f,
+        val shape: String = "Circle" // "Circle" | "Square" | "Line"
+    )
+    private val _pen = MutableStateFlow(PenState())
+    val pen: StateFlow<PenState> = _pen
+
+    fun setColor(c: Color) {
+        _pen.update { it.copy(color = c) }
+        canvasDrawer.setPenColor(c)
+    }
+    fun setSize(s: Float) {
+        _pen.update { it.copy(size = s) }
+        canvasDrawer.setPenSize(s)
+    }
+    fun setShape(shape: String) {
+        _pen.update { it.copy(shape = shape) }
+        canvasDrawer.penShape = shape
+    }
+
+    fun draw(x: Float, y: Float) = canvasDrawer.drawPen(x, y)
+    fun endStroke() = canvasDrawer.resetLine()
+    fun clear() = canvasDrawer.clear()
 }
+
 @Composable
-fun DrawingScreen(navController: NavHostController){
-    //placeholder pen menu
+fun DrawingScreen(navController: NavHostController) {
+    // VM + state from VM
+    val vm: DrawingViewModel = viewModel()
+    val pen by vm.pen.collectAsState()
+
     val penOptions = listOf("Circle", "Square", "Line")
     var droppedDown by remember { mutableStateOf(false) }
-    var selectedPen by rememberSaveable {mutableStateOf(penOptions[0])}
-    // Pen size state
-    var penSize by rememberSaveable { mutableFloatStateOf(10f) }
-    // Pen color state
-    var selectedColor by remember { mutableStateOf(Color.Black) }
+
+    // dialog UI state
     var showColorDialog by remember { mutableStateOf(false) }
     val controller = rememberColorPickerController()
+    var tempColor by remember { mutableStateOf(pen.color) }
 
-    //uses CanvasDrawer class, and copies bitmap so it can be redrawn every time a change is made
-    val viewModel: DrawingViewModel = viewModel()
-    val bitmap = viewModel.bitmap
-
+    // recomposition
+    var frame by rememberSaveable { mutableStateOf(0) }
 
     Column(
         modifier = Modifier
@@ -60,11 +87,7 @@ fun DrawingScreen(navController: NavHostController){
             .background(background)
             .padding(12.dp)
     ) {
-        //drop down pen menu, very basic
-        //
-        // this drop down can be removed later once there's a more encompassing UI class
-        //
-        //
+        // user config options
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -74,7 +97,7 @@ fun DrawingScreen(navController: NavHostController){
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(onClick = { droppedDown = true }) {
-                Text(selectedPen, color = textColor, fontSize = 25.sp)
+                Text(pen.shape, color = textColor, fontSize = 25.sp)
             }
 
             Spacer(modifier = Modifier.width(20.dp))
@@ -83,92 +106,82 @@ fun DrawingScreen(navController: NavHostController){
                 expanded = droppedDown,
                 onDismissRequest = { droppedDown = false }
             ) {
-                penOptions.forEach { pen ->
+                penOptions.forEach { shape ->
                     DropdownMenuItem(
-                        text = { Text(pen) },
+                        text = { Text(shape) },
                         onClick = {
-                            selectedPen = pen
-                            viewModel.canvasDrawer.penShape = pen
+                            vm.setShape(shape)
                             droppedDown = false
                         }
                     )
                 }
             }
 
-            // Color preview circle
+            // color preview
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .background(selectedColor)
-                    .clickable { showColorDialog = true }
+                    .clip(CircleShape)
+                    .background(pen.color)
+                    .clickable {
+                        tempColor = pen.color
+                        showColorDialog = true
+                    }
             )
 
             Spacer(modifier = Modifier.width(20.dp))
 
-            // Slider for pen size
+            // pen size
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Size: ${penSize.toInt()}",
-                    color = textColor)
+                Text("Size: ${pen.size.toInt()}", color = textColor)
                 Slider(
-                    value = penSize,
-                    onValueChange = { newSize ->
-                        penSize = newSize
-                    },
-                    valueRange = 1f..50f, // min/max pen size
+                    value = pen.size,
+                    onValueChange = { vm.setSize(it) },
+                    valueRange = 1f..50f,
                     modifier = Modifier.width(150.dp)
                 )
             }
         }
+
+        // drawing area
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Draw here")
+            Image(
+                bitmap = vm.canvasDrawer.bitmap.asImageBitmap(), // <- single shared bitmap
+                contentDescription = "Drawing Area",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = { p ->
+                                vm.draw(p.x, p.y)
+                                frame++
+                            },
+                            onDrag = { change, _ ->
+                                vm.draw(change.position.x, change.position.y)
+                                frame++
+                            },
+                            onDragEnd = { vm.endStroke() }
+                        )
+                    }
+            )
+            if (frame < 0) Text("") // to keep Compose aware of the frame
         }
-
-
-
-    //drawing area, uses the CanvasDrawer class and its bitmap.
-    //using pointerInput, tries to call drawPen from CanvasDrawer.
-    Column (modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally){
-        Text("Draw here")
-        //image in the screen showing the drawing canvas, using bitmap from CanvasDrawer
-        Image (
-            bitmap = bitmap.asImageBitmap(),
-            contentDescription = "Drawing Area",
-            modifier = Modifier
-                .fillMaxWidth()
-                .pointerInput(Unit){
-                    detectDragGestures(
-                        onDragStart = { point ->
-                            viewModel.canvasDrawer.drawPen(
-                                point.x,
-                                point.y)
-                            viewModel.canvasDrawer.setPenSize(penSize)
-                            viewModel.bitmap = viewModel.canvasDrawer.copyBitmap()
-                        },
-                        onDrag = { change, point ->
-                            viewModel.canvasDrawer.drawPen(
-                                change.position.x,
-                                change.position.y)
-                            viewModel.canvasDrawer.setPenSize(penSize)
-                            viewModel.bitmap = viewModel.canvasDrawer.copyBitmap()
-                        },
-                        onDragEnd = {
-                            viewModel.canvasDrawer.resetLine()
-                        }
-                    )
-                }
-        )
     }
 
+    // color picker modal
     if (showColorDialog) {
         AlertDialog(
             onDismissRequest = { showColorDialog = false },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.canvasDrawer.setPenColor(selectedColor)
+                    vm.setColor(tempColor)
                     showColorDialog = false
-                }) {
-                    Text("Confirm")
-                }
+                }) { Text("Confirm") }
             },
             title = { Text("Pick a color") },
             text = {
@@ -177,9 +190,9 @@ fun DrawingScreen(navController: NavHostController){
                         .fillMaxWidth()
                         .height(250.dp),
                     controller = controller,
-                    onColorChanged = { envelope ->
-                        selectedColor = envelope.color
-                        controller.wheelColor = selectedColor
+                    onColorChanged = { env ->
+                        tempColor = env.color
+                        controller.wheelColor = tempColor
                     }
                 )
             }

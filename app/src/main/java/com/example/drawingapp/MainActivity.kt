@@ -1,6 +1,5 @@
 package com.example.drawingapp
 
-
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
