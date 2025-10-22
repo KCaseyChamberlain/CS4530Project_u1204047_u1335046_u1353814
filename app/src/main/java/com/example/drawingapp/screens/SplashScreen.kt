@@ -29,7 +29,7 @@ import androidx.compose.ui.platform.testTag
 fun SplashScreen(navController: NavHostController) {
     SplashScreen(
         onTimeout = {
-            navController.navigate("draw")
+            navController.navigate("file_select")
         }
     )
 }
