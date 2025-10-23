@@ -3,7 +3,6 @@ package com.example.drawingapp.screens
 import android.R.attr.bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.widget.Button
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,12 +14,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import com.example.drawingapp.DrawingApp
 import com.example.drawingapp.ImageRepository
-import java.util.concurrent.TimeoutException
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.items
-import androidx.room.util.TableInfo
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,34 +25,64 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.navigation.compose.rememberNavController
 import com.example.drawingapp.shareImageFile
-
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 @Composable
 fun DrawingSelectionScreen(navController: NavHostController) {
-    val repo = (LocalContext.current.applicationContext as DrawingApp).repository
-    //repo.clearDB()  //Temporary for debugging
-    Column(modifier  = Modifier
-        .fillMaxSize()
-        .padding(12.dp),
-        verticalArrangement = Arrangement.Bottom) {
+    val app = LocalContext.current.applicationContext as DrawingApp
+    val repo = app.repository
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                val bmp = BitmapFactory.decodeStream(input)
+                if (bmp != null) {
+                    // Save into app storage + DB, then it appears in the list
+                    scope.launch {
+                        repo.saveImage(context, bmp, "Imported_${System.currentTimeMillis()}")
+                    }
+                }
+            }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(12.dp),
+        verticalArrangement = Arrangement.Bottom
+    ) {
+        // Import button ABOVE "New Drawing"
+        Button(
+            onClick = { importLauncher.launch("image/*") },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Import from Gallery")
+        }
+
         Button(
             onClick = { navController.navigate("draw/new") },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("New Drawing")
         }
+
         DrawingList(
             repo,
-            onTimeout = {
-                navController.navigate("file_select")
-            },
+            onTimeout = { navController.navigate("file_select") },
             navController
-
         )
     }
 }
+
 
 @Composable
 fun DrawingList(repo: ImageRepository, onTimeout: () -> Unit, navController: NavHostController){
