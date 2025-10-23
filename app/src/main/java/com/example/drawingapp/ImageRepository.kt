@@ -38,4 +38,10 @@ class ImageRepository (
             dao.insertFile(ImageEntity(filepath = file.absolutePath, nameOfFile))
         }
     }
+
+    fun deleteImage(id :Int){
+        scope.launch {
+            dao.deleteFile(id)
+        }
+    }
 }

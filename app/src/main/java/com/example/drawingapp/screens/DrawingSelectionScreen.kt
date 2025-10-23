@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import com.example.drawingapp.shareImageFile
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.absolutePadding
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 
@@ -57,7 +58,8 @@ fun DrawingSelectionScreen(navController: NavHostController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(12.dp),
+            .padding(12.dp)
+            .absolutePadding(0.dp, 20.dp, 0.dp, 0.dp),
         verticalArrangement = Arrangement.Bottom
     ) {
         // Import button ABOVE "New Drawing"
@@ -95,30 +97,39 @@ fun DrawingList(repo: ImageRepository, onTimeout: () -> Unit, navController: Nav
     ) {
         items(drawings) { image ->
             val bitmap = BitmapFactory.decodeFile(image.filepath)
-            Row {
-                Button(onClick = {
-                    val encodedPath = Uri.encode(image.filepath)
-                    navController.navigate("draw/$encodedPath")
-                }){
-                    Text(image.fileName)
-                }
+            Column {
+                Row {
+                    Button(onClick = {
+                        val encodedPath = Uri.encode(image.filepath)
+                        navController.navigate("draw/$encodedPath")
+                    }) {
+                        Text(image.fileName)
+                    }
 
-                // ---- ADD THIS BLOCK (Export button under the name) ----
-                Button(onClick = {
-                    shareImageFile(context, image.filepath)
-                }, modifier = Modifier.padding(start = 8.dp)) {
-                    Text("Export")
-                }
-                // -------------------------------------------------------
+                    // ---- ADD THIS BLOCK (Export button under the name) ----
+                    Button(onClick = {
+                        shareImageFile(context, image.filepath)
+                    }, modifier = Modifier.padding(start = 8.dp)) {
+                        Text("Export")
+                    }
 
-                Image(
-                    bitmap = bitmap.asImageBitmap(),
-                    contentDescription = image.fileName,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .padding(8.dp)
-                )
+                    Button(onClick = { repo.deleteImage(image.id) }
+                        , modifier = Modifier.padding(start = 8.dp)) {
+                        Text("Delete")
+                    }
+                }
+                Row {
+                    // -------------------------------------------------------
+
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = image.fileName,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .padding(8.dp)
+                    )
+                }
             }
         }
     }

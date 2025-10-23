@@ -18,6 +18,8 @@ interface ImageDao {
     @Query("DELETE FROM images")
     suspend fun clearAll()
 
+    @Query("DELETE FROM images WHERE id = :imageId")
+    suspend fun deleteFile(imageId: Int)
     @Query("SELECT fileName FROM images ORDER BY id ASC")
     fun getFileNames(): Flow<List<String>>
 }
