@@ -13,4 +13,11 @@ interface ImageDao {
 
     @Query("SELECT * FROM images ORDER BY id desc")
     fun getAllImages(): Flow<List<ImageEntity>>
+
+    // Temporary only for debugging
+    @Query("DELETE FROM images")
+    suspend fun clearAll()
+
+    @Query("SELECT fileName FROM images ORDER BY id ASC")
+    fun getFileNames(): Flow<List<String>>
 }

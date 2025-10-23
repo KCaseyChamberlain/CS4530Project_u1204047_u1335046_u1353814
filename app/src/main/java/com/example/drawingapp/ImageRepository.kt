@@ -22,14 +22,20 @@ class ImageRepository (
 {
     val allImages : Flow<List<ImageEntity>> = dao.getAllImages()
 
-    fun saveImage(context: Context, bitmap: Bitmap){
+
+    fun clearDB(){
+        scope.launch { dao.clearAll();}
+    }
+
+    fun saveImage(context: Context, bitmap: Bitmap, nameOfFile: String){
         scope.launch(Dispatchers.IO) {
             val filename = "drawing_app_${System.currentTimeMillis()}.png"
             val file = File(context.filesDir, filename)
             file.outputStream().buffered().use { image: OutputStream ->
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, image)
             }
-            dao.insertFile(ImageEntity(filepath = file.absolutePath))
+            //dao.insertFile(ImageEntity(filepath = file.absolutePath))
+            dao.insertFile(ImageEntity(filepath = file.absolutePath, nameOfFile))
         }
     }
 }

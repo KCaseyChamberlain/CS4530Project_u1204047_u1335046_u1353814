@@ -12,14 +12,23 @@ import androidx.compose.ui.graphics.toArgb
 class CanvasDrawer (
     private val width: Int
 ) {
-    val bitmap: Bitmap = createBitmap(width, width)
+    var bitmap: Bitmap = createBitmap(width, width)
     private val canvas: Canvas = Canvas(bitmap)
 
     val penShapes = listOf("Circle", "Square", "Line")
     //figure out what to do with other shapes later...
     var penShape = penShapes[0]
 
+    fun setMap(newBitmap: Bitmap) {
+        bitmap = newBitmap
+        canvas.setBitmap(bitmap)
+    }
 
+    fun setNewMap(newBitmap: Bitmap) {
+        bitmap = newBitmap
+        canvas.setBitmap(bitmap)
+        canvas.drawColor(Color.WHITE)
+    }
     private val drawing = Paint().apply {
         color = Color.BLACK
         strokeWidth = 12f

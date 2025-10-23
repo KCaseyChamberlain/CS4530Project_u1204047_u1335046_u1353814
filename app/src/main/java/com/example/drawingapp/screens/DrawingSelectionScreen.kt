@@ -1,6 +1,10 @@
 package com.example.drawingapp.screens
 
+import android.R.attr.bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.widget.Button
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -18,19 +22,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.items
 import androidx.room.util.TableInfo
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.navigation.compose.rememberNavController
 
 @Composable
 fun DrawingSelectionScreen(navController: NavHostController) {
     val repo = (LocalContext.current.applicationContext as DrawingApp).repository
+    //repo.clearDB()  //Temporary for debugging
     Column(modifier  = Modifier
         .fillMaxSize()
         .padding(12.dp),
         verticalArrangement = Arrangement.Bottom) {
         Button(
-            onClick = { navController.navigate("draw") },
+            onClick = { navController.navigate("draw/new") },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("New Drawing")
@@ -39,19 +48,38 @@ fun DrawingSelectionScreen(navController: NavHostController) {
             repo,
             onTimeout = {
                 navController.navigate("file_select")
-            }
+            },
+            navController
+
         )
     }
 }
 
 @Composable
-fun DrawingList(repo: ImageRepository, onTimeout: () -> Unit){
+fun DrawingList(repo: ImageRepository, onTimeout: () -> Unit, navController: NavHostController){
     val drawings by repo.allImages.collectAsState(initial = emptyList())
     LazyColumn (modifier = Modifier
         .fillMaxSize()
         .padding(12.dp)
     ) {
         items(drawings) { image ->
+            val bitmap = BitmapFactory.decodeFile(image.filepath)
+            Row {
+                Button(onClick = {
+                    val encodedPath = Uri.encode(image.filepath)
+                    navController.navigate("draw/$encodedPath")
+                }){
+                    Text(image.fileName)
+                }
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = image.fileName,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .padding(8.dp)
+                )
+            }
             ///fill in LazyColumn to show drawings, probably as Images?
         }
     }

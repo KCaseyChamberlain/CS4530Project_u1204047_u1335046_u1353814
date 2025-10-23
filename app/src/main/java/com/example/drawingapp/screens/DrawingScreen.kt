@@ -1,4 +1,9 @@
 package com.example.drawingapp.screens
+import android.R.attr.bitmap
+import android.app.Application
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,6 +24,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.drawingapp.CanvasDrawer
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -31,13 +37,30 @@ import com.example.drawingapp.ui.theme.textColor
 import com.github.skydoves.colorpicker.compose.HsvColorPicker
 import com.github.skydoves.colorpicker.compose.rememberColorPickerController
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import androidx.compose.ui.platform.testTag
+import androidx.lifecycle.AndroidViewModel
+import com.example.drawingapp.DrawingApp
+import java.io.File
+import java.io.FileOutputStream
+import androidx.core.graphics.createBitmap
 
-class DrawingViewModel : ViewModel() {
+class DrawingViewModel(application: Application) : AndroidViewModel(application) {
     val canvasDrawer = CanvasDrawer(width = 1000)
+    val dao=(application as DrawingApp).repository
+    var bitmap = mutableStateOf(canvasDrawer.bitmap)
+    fun setBitmap(newBitmap: Bitmap) {
+        canvasDrawer.setMap(newBitmap)
+        bitmap.value = canvasDrawer.bitmap
+    }
+
+    fun setNewBitMap(newBitmap: Bitmap) {
+        canvasDrawer.setNewMap(newBitmap)
+        bitmap.value = canvasDrawer.bitmap
+    }
 
     data class PenState(
         val color: Color = Color.Black,
@@ -63,13 +86,24 @@ class DrawingViewModel : ViewModel() {
     fun draw(x: Float, y: Float) = canvasDrawer.drawPen(x, y)
     fun endStroke() = canvasDrawer.resetLine()
     fun clear() = canvasDrawer.clear()
+
+    fun saveImage(context : Context, fileName: String) {
+        dao.saveImage(context, canvasDrawer.bitmap, fileName)
+    }
 }
 
 @Composable
-fun DrawingScreen(navController: NavHostController) {
+fun DrawingScreen(navController: NavHostController, filePath: String? = null) {
     // VM + state from VM
     val vm: DrawingViewModel = viewModel()
     val pen by vm.pen.collectAsState()
+
+    val bitmap by vm.bitmap
+    LaunchedEffect(filePath) {
+        BitmapFactory.decodeFile(filePath)?.copy(Bitmap.Config.ARGB_8888, true)?.let {
+            vm.setBitmap(it)
+        }?: vm.setNewBitMap(createBitmap(1000, 1000))
+    }
 
     val penOptions = listOf("Circle", "Square", "Line")
     var droppedDown by remember { mutableStateOf(false) }
@@ -81,6 +115,13 @@ fun DrawingScreen(navController: NavHostController) {
 
     // recomposition
     var frame by rememberSaveable { mutableStateOf(0) }
+
+    // For the save button and it's popup
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var fileName by remember { mutableStateOf("") }
+
+
+
 
     Column(
         modifier = Modifier
@@ -153,7 +194,7 @@ fun DrawingScreen(navController: NavHostController) {
         ) {
             Text("Draw here")
             Image(
-                bitmap = vm.canvasDrawer.bitmap.asImageBitmap(), // <- single shared bitmap
+                bitmap = bitmap.asImageBitmap(), // <- single shared bitmap
                 contentDescription = "Drawing Area",
                 modifier = Modifier
                     .fillMaxWidth()
@@ -172,6 +213,21 @@ fun DrawingScreen(navController: NavHostController) {
                     }
             )
             if (frame < 0) Text("") // to keep Compose aware of the frame
+            Button({showSaveDialog = true},
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = secondary,
+                    contentColor = Color.Black
+                )) {
+                Text("Save Image")
+            }
+            Button({navController.navigate("file_select")},
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = secondary,
+                    contentColor = Color.Black
+                )) {
+                Text("Back")
+            }
+
         }
     }
 
@@ -200,4 +256,41 @@ fun DrawingScreen(navController: NavHostController) {
             }
         )
     }
+
+    // Popup for the save button.
+    if (showSaveDialog) {
+        val context = LocalContext.current
+        AlertDialog(
+            onDismissRequest = { showSaveDialog = false },
+            title = { Text("Save Drawing") },
+            text = {
+                Column {
+                    Text("Enter a file name:")
+                    OutlinedTextField(
+                        value = fileName,
+                        onValueChange = { fileName = it },
+                        singleLine = true,
+                        placeholder = { Text("e.g. MyDrawing1") }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    // Call saveImage() with user-entered name
+                    if (fileName.isNotBlank()) {
+                        vm.saveImage(context, fileName)
+                        showSaveDialog = false
+                    }
+                }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSaveDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
 }

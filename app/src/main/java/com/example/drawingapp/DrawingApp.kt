@@ -18,6 +18,7 @@ class DrawingApp: Application() {
             ImageDatabase::class.java,
             "drawing_DB"
         ).build()
+        //).fallbackToDestructiveMigration().build()
     }
     val repository by lazy { ImageRepository(scope, db.imageDao()) }
 }

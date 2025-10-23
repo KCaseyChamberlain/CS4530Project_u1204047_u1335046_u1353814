@@ -5,6 +5,8 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.example.drawingapp.screens.DrawingScreen
 import com.example.drawingapp.screens.SplashScreen
 import com.example.drawingapp.screens.DrawingSelectionScreen
@@ -18,9 +20,15 @@ fun AppNavHost(navController: NavHostController, startDestination: String="home"
             SplashScreen(navController)
         }
 
-        composable("draw") {
-            DrawingScreen(navController)
+        composable(
+            route = "draw/{filePath}",
+            arguments = listOf(navArgument("filePath") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val path = backStackEntry.arguments?.getString("filePath")
+            val filePath = if (path == "new") null else path
+            DrawingScreen(navController, filePath)
         }
+
         composable("file_select"){
             DrawingSelectionScreen(navController)
         }
