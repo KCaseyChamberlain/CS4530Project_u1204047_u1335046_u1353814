@@ -29,6 +29,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.navigation.compose.rememberNavController
+import com.example.drawingapp.shareImageFile
+
 
 @Composable
 fun DrawingSelectionScreen(navController: NavHostController) {
@@ -58,6 +60,8 @@ fun DrawingSelectionScreen(navController: NavHostController) {
 @Composable
 fun DrawingList(repo: ImageRepository, onTimeout: () -> Unit, navController: NavHostController){
     val drawings by repo.allImages.collectAsState(initial = emptyList())
+    val context = LocalContext.current   // <— ADD THIS
+
     LazyColumn (modifier = Modifier
         .fillMaxSize()
         .padding(12.dp)
@@ -71,6 +75,15 @@ fun DrawingList(repo: ImageRepository, onTimeout: () -> Unit, navController: Nav
                 }){
                     Text(image.fileName)
                 }
+
+                // ---- ADD THIS BLOCK (Export button under the name) ----
+                Button(onClick = {
+                    shareImageFile(context, image.filepath)
+                }, modifier = Modifier.padding(start = 8.dp)) {
+                    Text("Export")
+                }
+                // -------------------------------------------------------
+
                 Image(
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = image.fileName,
@@ -80,7 +93,6 @@ fun DrawingList(repo: ImageRepository, onTimeout: () -> Unit, navController: Nav
                         .padding(8.dp)
                 )
             }
-            ///fill in LazyColumn to show drawings, probably as Images?
         }
     }
 }
