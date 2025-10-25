@@ -26,7 +26,7 @@ class InstrumentedTests {
 
     @get:Rule
     val composeRule = createAndroidComposeRule<MainActivity>()
-    
+
     @Test
     fun pen_size_changes_when_slider_moves() {
         val app = ApplicationProvider.getApplicationContext<android.app.Application>()

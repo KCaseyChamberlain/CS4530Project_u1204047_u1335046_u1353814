@@ -92,6 +92,29 @@ class DrawingViewModel(application: Application) : AndroidViewModel(application)
     }
 }
 
+private fun fitIntoSquare(
+    src: android.graphics.Bitmap,
+    size: Int = 1000,
+    bg: Int = android.graphics.Color.WHITE
+): android.graphics.Bitmap {
+    val dst = android.graphics.Bitmap.createBitmap(
+        size, size, android.graphics.Bitmap.Config.ARGB_8888
+    )
+    val c = android.graphics.Canvas(dst)
+    c.drawColor(bg)
+
+    val scale = minOf(size.toFloat() / src.width, size.toFloat() / src.height)
+    val w = (src.width * scale).toInt()
+    val h = (src.height * scale).toInt()
+    val left = (size - w) / 2
+    val top = (size - h) / 2
+
+    val dstRect = android.graphics.Rect(left, top, left + w, top + h)
+    c.drawBitmap(src, null, dstRect, null)
+    return dst
+}
+
+
 @Composable
 fun DrawingScreen(navController: NavHostController, filePath: String? = null) {
     // VM + state from VM
@@ -100,9 +123,14 @@ fun DrawingScreen(navController: NavHostController, filePath: String? = null) {
 
     val bitmap by vm.bitmap
     LaunchedEffect(filePath) {
-        BitmapFactory.decodeFile(filePath)?.copy(Bitmap.Config.ARGB_8888, true)?.let {
-            vm.setBitmap(it)
-        }?: vm.setNewBitMap(createBitmap(1000, 1000))
+        val targetSize = 1000
+        val raw = BitmapFactory.decodeFile(filePath)
+        if (raw != null) {
+            val fitted = fitIntoSquare(raw, targetSize, android.graphics.Color.WHITE)
+            vm.setBitmap(fitted)
+        } else {
+            vm.setNewBitMap(createBitmap(targetSize, targetSize))
+        }
     }
 
     val penOptions = listOf("Circle", "Square", "Line")
