@@ -98,29 +98,27 @@ fun DrawingList(repo: ImageRepository, onTimeout: () -> Unit, navController: Nav
         items(drawings) { image ->
             val bitmap = BitmapFactory.decodeFile(image.filepath)
             Column {
-                Row {
+                // image name
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                     Button(onClick = {
                         val encodedPath = Uri.encode(image.filepath)
                         navController.navigate("draw/$encodedPath")
                     }) {
                         Text(image.fileName)
                     }
-
-                    // ---- ADD THIS BLOCK (Export button under the name) ----
-                    Button(onClick = {
-                        shareImageFile(context, image.filepath)
-                    }, modifier = Modifier.padding(start = 8.dp)) {
-                        Text("Export")
-                    }
-
-                    Button(onClick = { repo.deleteImage(image.id) }
-                        , modifier = Modifier.padding(start = 8.dp)) {
-                        Text("Delete")
-                    }
                 }
-                Row {
-                    // -------------------------------------------------------
 
+                // actions
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                    Button(onClick = { shareImageFile(context, image.filepath) }) { Text("Export") }
+                    Button(
+                        onClick = { repo.deleteImage(image.id) },
+                        modifier = Modifier.padding(start = 8.dp)
+                    ) { Text("Delete") }
+                }
+
+                // image
+                Row {
                     Image(
                         bitmap = bitmap.asImageBitmap(),
                         contentDescription = image.fileName,
