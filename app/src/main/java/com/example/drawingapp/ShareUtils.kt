@@ -5,6 +5,10 @@ import android.content.Intent
 import androidx.core.content.FileProvider
 import java.io.File
 
+/*
+Used for sharing drawings with other apps on the OS. Uses the filepath, creates a URI, and creates
+an Intent including that URI
+ */
 fun shareImageFile(context: Context, absolutePath: String) {
     val f = File(absolutePath)
     if (!f.exists()) return

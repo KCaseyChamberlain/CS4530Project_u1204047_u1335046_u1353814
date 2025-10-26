@@ -39,6 +39,7 @@ fun DrawingSelectionScreen(navController: NavHostController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    //using uri, create an import launcher if the user wants to use an image from another app.
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri ->
@@ -91,6 +92,8 @@ fun DrawingList(repo: ImageRepository, onTimeout: () -> Unit, navController: Nav
     val drawings by repo.allImages.collectAsState(initial = emptyList())
     val context = LocalContext.current   // <— ADD THIS
 
+    //Lazy Column contains a list of all drawings, with
+    // buttons to export, delete, and edit each image.
     LazyColumn (modifier = Modifier
         .fillMaxSize()
         .padding(12.dp)

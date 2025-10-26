@@ -9,7 +9,7 @@ import com.example.drawingapp.storage.ImageEntity
 import com.example.drawingapp.storage.ImageDatabase
 import kotlinx.coroutines.SupervisorJob
 
-///Singleton so only one repository is created
+///Singleton so only one instance is created
 class DrawingApp: Application() {
     val scope =CoroutineScope(SupervisorJob())
     val db by lazy {
@@ -20,5 +20,7 @@ class DrawingApp: Application() {
         ).build()
         //).fallbackToDestructiveMigration().build()
     }
+
+    //establish repository when called
     val repository by lazy { ImageRepository(scope, db.imageDao()) }
 }

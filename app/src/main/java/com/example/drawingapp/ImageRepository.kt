@@ -15,6 +15,11 @@ import java.io.OutputStream
 import kotlin.io.use
 import android.content.Context
 
+/*
+This class defines the repository used for interfacing with the database.
+
+Using the ImageDao, it can access all images, save an image to the database, and delete an image.
+ */
 class ImageRepository (
     private val scope: CoroutineScope,
     private val dao: ImageDao
@@ -23,10 +28,17 @@ class ImageRepository (
     val allImages : Flow<List<ImageEntity>> = dao.getAllImages()
 
 
+    /*
+    Clears all drawings from the db.
+     */
     fun clearDB(){
         scope.launch { dao.clearAll();}
     }
 
+    /*
+    Saves images. Actual drawing gets saved to the directory as a PNG, filename/path is
+    saved in the database.
+     */
     fun saveImage(context: Context, bitmap: Bitmap, nameOfFile: String){
         scope.launch(Dispatchers.IO) {
             val filename = "drawing_app_${System.currentTimeMillis()}.png"
@@ -39,6 +51,9 @@ class ImageRepository (
         }
     }
 
+    /*
+    Deletes an image path from the database.
+     */
     fun deleteImage(id :Int){
         scope.launch {
             dao.deleteFile(id)

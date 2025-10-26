@@ -48,6 +48,10 @@ import java.io.File
 import java.io.FileOutputStream
 import androidx.core.graphics.createBitmap
 
+/*
+Class used for drawing data. Contains the Canvas Drawer, the bitmap storing the data,
+and functions for changing the data, as well as the state of the pen.
+ */
 class DrawingViewModel(application: Application) : AndroidViewModel(application) {
     val canvasDrawer = CanvasDrawer(width = 1000)
     val dao=(application as DrawingApp).repository

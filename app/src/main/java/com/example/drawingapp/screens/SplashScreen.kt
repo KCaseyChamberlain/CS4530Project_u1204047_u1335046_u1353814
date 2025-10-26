@@ -25,6 +25,9 @@ import com.example.drawingapp.R
 import kotlinx.coroutines.delay
 import androidx.compose.ui.platform.testTag
 
+/*
+Once splash screen is done, move on to the file select screen.
+ */
 @Composable
 fun SplashScreen(navController: NavHostController) {
     SplashScreen(
