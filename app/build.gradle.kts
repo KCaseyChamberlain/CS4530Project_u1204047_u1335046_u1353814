@@ -6,7 +6,14 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.serialization)
 }
+//read secret API key
+val secretFile = rootProject.file("secrets.properties")
+val secretsMap = secretFile.readLines()
+    .map {it.split("=")}
+    .associate {it[0].trim() to it[1].trim()}
+val apiKey = secretsMap["GEMINI_API_KEY"] ?: ""
 
 android {
     namespace = "com.example.drawingapp"
@@ -59,6 +66,18 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
+
+    //ktor dependencies
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.android)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.kotlinx.serialization.json)
+
+    //genai google dependencies
+    implementation(libs.google.generativeai)
+
     implementation(libs.androidx.animation)
     implementation(libs.androidx.navigation.compose)
     testImplementation(libs.junit)
