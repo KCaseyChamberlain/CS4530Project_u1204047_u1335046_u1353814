@@ -8,6 +8,7 @@ import io.ktor.http.*
 import io.ktor.client.call.*
 import kotlinx.serialization.Serializable
 import android.util.Base64
+import android.util.Log
 import androidx.compose.ui.input.key.Key
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -44,7 +45,7 @@ data class VisionRequests(
 //matching variable names with api names
 @Serializable
 data class VisionResult(
-    val localizedObjectAnnotations: List<DetectedObj>? = null
+    val localizedObjectAnnotations: List<DetectedObj>? = emptyList()
 )
 
 //detected objects, with a name, confidence score, and bounding box
@@ -71,7 +72,7 @@ data class Point(
 //list of results from google vision
 @Serializable
 data class VisionResponse(
-    val responses: List<VisionResult>
+    val responses: List<VisionResult>? = null
 )
 
 
