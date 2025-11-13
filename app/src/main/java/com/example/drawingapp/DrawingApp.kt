@@ -38,4 +38,6 @@ class DrawingApp: Application() {
             }
         }
     }
+
+    val visionRepository by lazy { VisionRepository(client) }
 }
