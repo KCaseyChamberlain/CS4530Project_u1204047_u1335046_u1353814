@@ -31,6 +31,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.absolutePadding
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 
 @Composable
 fun DrawingSelectionScreen(navController: NavHostController) {
@@ -49,7 +51,16 @@ fun DrawingSelectionScreen(navController: NavHostController) {
                 if (bmp != null) {
                     // Save into app storage + DB, then it appears in the list
                     scope.launch {
-                        repo.saveImage(context, bmp, "Imported_${System.currentTimeMillis()}")
+                        repo.saveImage(
+                            context,
+                            bmp,
+                            "Imported_${System.currentTimeMillis()}"
+                        ) { savedPath ->
+                            val encodedPath = Uri.encode(savedPath)
+                            CoroutineScope(Dispatchers.Main).launch {
+                                navController.navigate("analyze/$encodedPath")
+                            }
+                        }
                     }
                 }
             }
@@ -65,7 +76,7 @@ fun DrawingSelectionScreen(navController: NavHostController) {
     ) {
         // Import button ABOVE "New Drawing"
         Button(
-            onClick = { importLauncher.launch("image/*") },
+            onClick = { importLauncher.launch("image/*")},
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Import from Gallery")

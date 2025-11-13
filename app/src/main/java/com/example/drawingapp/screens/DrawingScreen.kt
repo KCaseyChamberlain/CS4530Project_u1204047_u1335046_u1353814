@@ -92,7 +92,7 @@ class DrawingViewModel(application: Application) : AndroidViewModel(application)
     fun clear() = canvasDrawer.clear()
 
     fun saveImage(context : Context, fileName: String) {
-        dao.saveImage(context, canvasDrawer.bitmap, fileName)
+        dao.saveImage(context, canvasDrawer.bitmap, fileName) { savedPath -> }
     }
 }
 

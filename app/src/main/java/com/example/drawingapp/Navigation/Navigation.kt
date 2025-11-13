@@ -10,6 +10,7 @@ import androidx.navigation.navArgument
 import com.example.drawingapp.screens.DrawingScreen
 import com.example.drawingapp.screens.SplashScreen
 import com.example.drawingapp.screens.DrawingSelectionScreen
+import com.example.drawingapp.screens.ImportAiScreen
 
 @Composable
 fun AppNavHost(navController: NavHostController, startDestination: String="home")
@@ -32,5 +33,14 @@ fun AppNavHost(navController: NavHostController, startDestination: String="home"
         composable("file_select"){
             DrawingSelectionScreen(navController)
         }
+
+        composable(
+            route = "analyze/{filePath}",
+            arguments = listOf(navArgument("filePath") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val path = backStackEntry.arguments?.getString("filePath")
+            ImportAiScreen(navController, path)
+        }
+
     }
 }

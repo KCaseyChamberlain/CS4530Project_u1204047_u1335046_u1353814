@@ -22,10 +22,11 @@ Using the ImageDao, it can access all images, save an image to the database, and
  */
 class ImageRepository (
     private val scope: CoroutineScope,
-    private val dao: ImageDao
+    private val dao: ImageDao,
 )
 {
     val allImages : Flow<List<ImageEntity>> = dao.getAllImages()
+
 
 
     /*
@@ -39,7 +40,7 @@ class ImageRepository (
     Saves images. Actual drawing gets saved to the directory as a PNG, filename/path is
     saved in the database.
      */
-    fun saveImage(context: Context, bitmap: Bitmap, nameOfFile: String){
+    fun saveImage(context: Context, bitmap: Bitmap, nameOfFile: String, onSaved: (String) -> Unit){
         scope.launch(Dispatchers.IO) {
             val filename = "drawing_app_${System.currentTimeMillis()}.png"
             val file = File(context.filesDir, filename)
@@ -48,6 +49,7 @@ class ImageRepository (
             }
             //dao.insertFile(ImageEntity(filepath = file.absolutePath))
             dao.insertFile(ImageEntity(filepath = file.absolutePath, nameOfFile))
+            onSaved(file.absolutePath)
         }
     }
 
