@@ -45,7 +45,14 @@ data class VisionRequests(
 //matching variable names with api names
 @Serializable
 data class VisionResult(
-    val localizedObjectAnnotations: List<DetectedObj>? = emptyList()
+    val localizedObjectAnnotations: List<DetectedObj>? = emptyList(),
+    val labelAnnotations: List<VisionLabel>? = emptyList()
+)
+
+@Serializable
+data class VisionLabel(
+    val description: String,
+    val score: Float
 )
 
 //detected objects, with a name, confidence score, and bounding box
@@ -91,7 +98,8 @@ class VisionRepository(private val client: HttpClient) {
                 VisRequest(
                     image = VisImage(content = convertedImage),
                     features = listOf(
-                        VisFeature(type = "OBJECT_LOCALIZATION", maxResults = 10)
+                        VisFeature(type = "OBJECT_LOCALIZATION", maxResults = 10),
+                        VisFeature(type = "LABEL_DETECTION", maxResults = 5)
                     )
                 )
             )
