@@ -34,6 +34,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 
 class AiViewModel(application: Application) : AndroidViewModel(application) {
     val vision = (application as DrawingApp).visionRepository
@@ -123,40 +126,56 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
         }
 
         // Display detected objects + labels
-        vm.visionResponse?.responses?.forEach { result ->
+        val responses = vm.visionResponse?.responses
 
-            // grab the top label (if any) once per result
-            val topLabel = result.labelAnnotations?.firstOrNull()
+        // if we have a response and NO objects anywhere -> show "Nothing Detected"
+        val hasObjects = responses?.any { !it.localizedObjectAnnotations.isNullOrEmpty() } == true
 
-            result.localizedObjectAnnotations?.forEach { obj ->
-                // 1) name
-                Text("Name: ${obj.name}")
+        if (responses != null && !hasObjects) {
+            Text(
+                text = "Nothing Detected",
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        } else {
+            responses?.forEach { result ->
 
-                // 2) confidence
-                val confidencePercent = (obj.score * 100).toInt()
-                Text("Confidence: $confidencePercent%")
+                // grab the top label (if any) once per result
+                val topLabel = result.labelAnnotations?.firstOrNull()
 
-                // 3) label (top 1), only if something detected
-                topLabel?.let { label ->
-                    val labelConfidence = (label.score * 100).toInt()
-                    Text("Label: ${label.description} ($labelConfidence%)")
-                }
+                result.localizedObjectAnnotations?.forEach { obj ->
+                    // 1) name
+                    Text("Name: ${obj.name}")
 
-                // 4) box coords coords (normalized bounding box)
-                val verts = obj.boundingPoly.normalizedVertices
-                val xs = verts.mapNotNull { it.x }
-                val ys = verts.mapNotNull { it.y }
+                    // 2) confidence
+                    val confidencePercent = (obj.score * 100).toInt()
+                    Text("Confidence: $confidencePercent%")
 
-                if (xs.isNotEmpty() && ys.isNotEmpty()) {
-                    val left = xs.minOrNull() ?: 0f
-                    val right = xs.maxOrNull() ?: 0f
-                    val top = ys.minOrNull() ?: 0f
-                    val bottom = ys.maxOrNull() ?: 0f
+                    // 3) label (top 1), only if something detected
+                    topLabel?.let { label ->
+                        val labelConfidence = (label.score * 100).toInt()
+                        Text("Label: ${label.description} ($labelConfidence%)")
+                    }
 
-                    Text("Box Coordinates: left=$left, top=$top, right=$right, bottom=$bottom")
+                    // 4) box coords coords (normalized bounding box)
+                    val verts = obj.boundingPoly.normalizedVertices
+                    val xs = verts.mapNotNull { it.x }
+                    val ys = verts.mapNotNull { it.y }
+
+                    if (xs.isNotEmpty() && ys.isNotEmpty()) {
+                        val left = xs.minOrNull() ?: 0f
+                        val right = xs.maxOrNull() ?: 0f
+                        val top = ys.minOrNull() ?: 0f
+                        val bottom = ys.maxOrNull() ?: 0f
+
+                        Text("Box Coordinates: left=$left, top=$top, right=$right, bottom=$bottom")
+                    }
                 }
             }
         }
+
 
         Button(onClick = {
             navController.navigate("file_select")
