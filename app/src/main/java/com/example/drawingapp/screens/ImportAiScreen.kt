@@ -37,6 +37,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.remember
 
 class AiViewModel(application: Application) : AndroidViewModel(application) {
     val vision = (application as DrawingApp).visionRepository
@@ -59,6 +60,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
 fun ImportAiScreen(navController: NavHostController, filePath: String?) {
     val context = LocalContext.current
     val vm: AiViewModel = viewModel()
+    var isAnalyzing by remember { mutableStateOf(true) }
 
     if (filePath == null) {
         Text("No image found")
@@ -68,10 +70,13 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
     val imageUri = Uri.fromFile(file)
     LaunchedEffect(filePath) {
         try {
+            isAnalyzing = true
             vm.analyzeImg(context, imageUri)
             Log.d("ImportAiScreen", "Vision API called successfully")
         } catch (e: Exception) {
             Log.e("ImportAiScreen", "Vision API call failed", e)
+        } finally {
+            isAnalyzing = false
         }
     }
 
@@ -128,53 +133,64 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
         // Display detected objects + labels
         val responses = vm.visionResponse?.responses
 
-        // if we have a response and NO objects anywhere -> show "Nothing Detected"
-        val hasObjects = responses?.any { !it.localizedObjectAnnotations.isNullOrEmpty() } == true
-
-        if (responses != null && !hasObjects) {
+        if (isAnalyzing) {
             Text(
-                text = "Nothing Detected",
+                text = "Analyzing image...",
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium
             )
         } else {
-            responses?.forEach { result ->
+            // if we have a response and NO objects anywhere -> show "Nothing Detected"
+            val hasObjects = responses?.any { !it.localizedObjectAnnotations.isNullOrEmpty() } == true
 
-                // grab the top label (if any) once per result
-                val topLabel = result.labelAnnotations?.firstOrNull()
+            if (responses != null && !hasObjects) {
+                Text(
+                    text = "Nothing Detected",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            } else {
+                responses?.forEach { result ->
 
-                result.localizedObjectAnnotations?.forEach { obj ->
-                    // 1) name
-                    Text("Name: ${obj.name}")
+                    // grab the top label (if any) once per result
+                    val topLabel = result.labelAnnotations?.firstOrNull()
 
-                    // 2) confidence
-                    val confidencePercent = (obj.score * 100).toInt()
-                    Text("Confidence: $confidencePercent%")
+                    result.localizedObjectAnnotations?.forEach { obj ->
+                        // 1) name
+                        Text("Name: ${obj.name}")
 
-                    // 3) label (top 1), only if something detected
-                    topLabel?.let { label ->
-                        val labelConfidence = (label.score * 100).toInt()
-                        Text("Label: ${label.description} ($labelConfidence%)")
-                    }
+                        // 2) confidence
+                        val confidencePercent = (obj.score * 100).toInt()
+                        Text("Confidence: $confidencePercent%")
 
-                    // 4) box coords coords (normalized bounding box)
-                    val verts = obj.boundingPoly.normalizedVertices
-                    val xs = verts.mapNotNull { it.x }
-                    val ys = verts.mapNotNull { it.y }
+                        // 3) label (top 1), only if something detected
+                        topLabel?.let { label ->
+                            val labelConfidence = (label.score * 100).toInt()
+                            Text("Label: ${label.description} ($labelConfidence%)")
+                        }
 
-                    if (xs.isNotEmpty() && ys.isNotEmpty()) {
-                        val left = xs.minOrNull() ?: 0f
-                        val right = xs.maxOrNull() ?: 0f
-                        val top = ys.minOrNull() ?: 0f
-                        val bottom = ys.maxOrNull() ?: 0f
+                        // 4) box coords coords (normalized bounding box)
+                        val verts = obj.boundingPoly.normalizedVertices
+                        val xs = verts.mapNotNull { it.x }
+                        val ys = verts.mapNotNull { it.y }
 
-                        Text("Box Coordinates: left=$left, top=$top, right=$right, bottom=$bottom")
+                        if (xs.isNotEmpty() && ys.isNotEmpty()) {
+                            val left = xs.minOrNull() ?: 0f
+                            val right = xs.maxOrNull() ?: 0f
+                            val top = ys.minOrNull() ?: 0f
+                            val bottom = ys.maxOrNull() ?: 0f
+
+                            Text("Box Coordinates: left=$left, top=$top, right=$right, bottom=$bottom")
+                        }
                     }
                 }
             }
         }
+
 
 
         Button(onClick = {
