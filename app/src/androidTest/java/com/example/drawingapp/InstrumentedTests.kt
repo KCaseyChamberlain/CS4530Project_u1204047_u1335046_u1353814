@@ -195,4 +195,87 @@ class InstrumentedTests {
         }
     }
 
+    @Test
+    fun vision_nothing_detected_when_no_objects() {
+        // fake response with no localized objects
+        val result = VisionResult(
+            localizedObjectAnnotations = emptyList(),
+            labelAnnotations = emptyList()
+        )
+        val response = VisionResponse(responses = listOf(result))
+
+        val responses = response.responses
+
+        // same condition as ImportAiScreen uses
+        val hasObjects = responses?.any { !it.localizedObjectAnnotations.isNullOrEmpty() } == true
+
+        // we expect this to be false -> UI would show "Nothing Detected"
+        assertFalse(hasObjects)
+    }
+
+    @Test
+    fun vision_parsing_uses_name_confidence_label_and_box() {
+        // fake object from the API
+        val obj = DetectedObj(
+            name = "Cat",
+            score = 0.87f, // 87%
+            boundingPoly = BoundingBox(
+                normalizedVertices = listOf(
+                    Point(0.1f, 0.2f),
+                    Point(0.4f, 0.2f),
+                    Point(0.4f, 0.6f),
+                    Point(0.1f, 0.6f)
+                )
+            )
+        )
+
+        // fake labels from API
+        val label1 = VisionLabel(description = "Animal", score = 0.95f) // 95%
+        val label2 = VisionLabel(description = "Pet", score = 0.90f)
+
+        val result = VisionResult(
+            localizedObjectAnnotations = listOf(obj),
+            labelAnnotations = listOf(label1, label2)
+        )
+
+        val response = VisionResponse(responses = listOf(result))
+
+        // this matches what ImportAiScreen does
+        val responses = response.responses
+        assertNotNull(responses)
+
+        val firstResult = responses!!.first()
+        val firstObj = firstResult.localizedObjectAnnotations?.first()
+        assertNotNull(firstObj)
+
+        // name
+        assertEquals("Cat", firstObj!!.name)
+
+        // confidence as percent
+        val confidencePercent = (firstObj.score * 100).toInt()
+        assertEquals(87, confidencePercent)
+
+        // top label
+        val topLabel = firstResult.labelAnnotations?.firstOrNull()
+        assertNotNull(topLabel)
+        assertEquals("Animal", topLabel!!.description)
+        val labelPercent = (topLabel.score * 100).toInt()
+        assertEquals(95, labelPercent)
+
+        // bounding box coords (same math as ImportAiScreen)
+        val verts = firstObj.boundingPoly.normalizedVertices
+        val xs = verts.mapNotNull { it.x }
+        val ys = verts.mapNotNull { it.y }
+
+        val left = xs.minOrNull() ?: 0f
+        val right = xs.maxOrNull() ?: 0f
+        val top = ys.minOrNull() ?: 0f
+        val bottom = ys.maxOrNull() ?: 0f
+
+        assertEquals(0.1f, left, 0.0001f)
+        assertEquals(0.4f, right, 0.0001f)
+        assertEquals(0.2f, top, 0.0001f)
+        assertEquals(0.6f, bottom, 0.0001f)
+    }
+
 }
