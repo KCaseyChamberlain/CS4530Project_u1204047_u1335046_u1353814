@@ -113,7 +113,7 @@ class InstrumentedTests {
         val name = "Imported_${System.currentTimeMillis()}"
 
         // save via repository
-        repo.saveImage(ctx, bmp, name)
+        repo.saveImage(ctx, bmp, name) { /* ignore path in test */ }
 
         val row = withTimeout(5_000) {
             var found: com.example.drawingapp.storage.ImageEntity? = null
@@ -159,4 +159,40 @@ class InstrumentedTests {
         }
         scenario.close()
     }
+
+
+    @Test
+    fun vision_api_call_success() = runBlocking {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>() as DrawingApp
+        val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val vm = com.example.drawingapp.screens.AiViewModel(app)
+
+        // key check
+        assertTrue(vm.apiKey.isNotBlank())
+
+        // small pink bitmap
+        val bmp = android.graphics.Bitmap.createBitmap(
+            8,
+            8,
+            android.graphics.Bitmap.Config.ARGB_8888
+        ).apply {
+            eraseColor(android.graphics.Color.MAGENTA)
+        }
+
+        // save bitmap
+        val file = java.io.File(ctx.filesDir, "vision_test.png")
+        java.io.FileOutputStream(file).use {
+            bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+        }
+
+        val uri = android.net.Uri.fromFile(file)
+
+        // just make sure this does not throw
+        try {
+            vm.analyzeImg(ctx, uri)
+        } catch (e: Exception) {
+            fail("vision api call crashed: ${e.message}")
+        }
+    }
+
 }
