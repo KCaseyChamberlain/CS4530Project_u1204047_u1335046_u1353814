@@ -49,6 +49,7 @@ data class VisionResult(
     val labelAnnotations: List<VisionLabel>? = emptyList()
 )
 
+//image description and confidence score
 @Serializable
 data class VisionLabel(
     val description: String,
@@ -89,6 +90,7 @@ data class VisionResponse(
 //sends to api, then we store the response
 class VisionRepository(private val client: HttpClient) {
     suspend fun analyzeImage(context: Context, imageUri: Uri, apiKey: String): VisionResponse {
+        //uses image uri, sends to Google Vision
         val inputStream = context.contentResolver.openInputStream(imageUri)
         val imageBytes = inputStream?.readBytes() ?: error("Failed to upload image")
         inputStream.close()
@@ -104,6 +106,7 @@ class VisionRepository(private val client: HttpClient) {
                 )
             )
         )
+        //api access, using api key
         val response: VisionResponse = client.post(
             "https://vision.googleapis.com/v1/images:annotate?key=$apiKey"
         ) {

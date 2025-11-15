@@ -52,6 +52,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     var visionResponse by mutableStateOf<VisionResponse?>(null)
         private set
 
+    //calls repository function that uses http client to send image to google vision
     suspend fun analyzeImg(context: Context, image: Uri) {
         visionResponse = vision.analyzeImage(context, image, apiKey)
     }
@@ -89,10 +90,11 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
 
     val bitmap = BitmapFactory.decodeFile(filePath)
 
+    //top-down: show image containing bounding boxes, with details of each
+    //response and score below in a scrollable list. underneath, contains a back button.
     Column(modifier = Modifier.fillMaxSize()
         .padding(top = 48.dp)) {
         val aspectRatio = bitmap.width.toFloat() / bitmap.height.toFloat()
-
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -104,11 +106,11 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
                 modifier = Modifier.matchParentSize(),
                 contentScale = ContentScale.Fit   // no stretch, just fit exactly
             )
-
             Canvas(modifier = Modifier.matchParentSize()) {
                 val responses = vm.visionResponse?.responses ?: emptyList()
                 var objIndex = 1
 
+                //draw each bounding box
                 responses.forEach { result ->
                     result.localizedObjectAnnotations?.forEach { obj ->
                         val verts = obj.boundingPoly.normalizedVertices
@@ -132,6 +134,7 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
                                 size = Size(right - left, bottom - top),
                                 style = Stroke(width = 4f)
                             )
+                            //add number identifying each box
                             drawContext.canvas.nativeCanvas.drawText(
                                 objIndex.toString(),
                                 left,
@@ -142,6 +145,7 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
                                     isFakeBoldText = true
                                 }
                             )
+                            //match box index with details panel index
                             objIndex++
                         }
                     }
@@ -154,10 +158,8 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
                 .weight(1f)
                 .padding(12.dp)
         ) {
-
             // Display detected objects + labels
             val responses = vm.visionResponse?.responses
-
             if (isAnalyzing) {
                 item {
                     Text(
@@ -190,6 +192,7 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
                             // grab the top label (if any) once per result
                             val topLabel = result.labelAnnotations?.firstOrNull()
 
+                            //index marks which box goes to which details
                             result.localizedObjectAnnotations?.forEach { obj ->
                                 Text("Object $oIndex")
                                 // 1) name
@@ -219,6 +222,7 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
                                     Text("Box Coordinates: left=$left, top=$top, right=$right, bottom=$bottom")
                                 }
                                 Spacer(Modifier.height(12.dp))
+                                //next object corresponds to the next box
                                 oIndex++
                             }
                         }
@@ -226,8 +230,7 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
                 }
             }
         }
-
-
+        //sends back to the drawing selection screen
         Button(onClick = {
             navController.navigate("file_select")
         },
