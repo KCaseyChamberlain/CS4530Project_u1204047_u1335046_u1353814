@@ -28,16 +28,22 @@ import com.example.drawingapp.VisionResponse
 import java.io.File
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.unit.dp
 
 class AiViewModel(application: Application) : AndroidViewModel(application) {
     val vision = (application as DrawingApp).visionRepository
@@ -83,7 +89,8 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
 
     val bitmap = BitmapFactory.decodeFile(filePath)
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize()
+        .padding(top = 48.dp)) {
         val aspectRatio = bitmap.width.toFloat() / bitmap.height.toFloat()
 
         Box(
@@ -100,6 +107,7 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
 
             Canvas(modifier = Modifier.matchParentSize()) {
                 val responses = vm.visionResponse?.responses ?: emptyList()
+                var objIndex = 1
 
                 responses.forEach { result ->
                     result.localizedObjectAnnotations?.forEach { obj ->
@@ -124,78 +132,108 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
                                 size = Size(right - left, bottom - top),
                                 style = Stroke(width = 4f)
                             )
+                            drawContext.canvas.nativeCanvas.drawText(
+                                objIndex.toString(),
+                                left,
+                                top - 12f,
+                                android.graphics.Paint().apply {
+                                    color = android.graphics.Color.RED
+                                    textSize = 42f
+                                    isFakeBoldText = true
+                                }
+                            )
+                            objIndex++
                         }
                     }
                 }
             }
         }
+        LazyColumn   (
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(12.dp)
+        ) {
 
-        // Display detected objects + labels
-        val responses = vm.visionResponse?.responses
+            // Display detected objects + labels
+            val responses = vm.visionResponse?.responses
 
-        if (isAnalyzing) {
-            Text(
-                text = "Analyzing image...",
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium
-            )
-        } else {
-            // if we have a response and NO objects anywhere -> show "Nothing Detected"
-            val hasObjects = responses?.any { !it.localizedObjectAnnotations.isNullOrEmpty() } == true
-
-            if (responses != null && !hasObjects) {
-                Text(
-                    text = "Nothing Detected",
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
+            if (isAnalyzing) {
+                item {
+                    Text(
+                        text = "Analyzing image...",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             } else {
-                responses?.forEach { result ->
+                // if we have a response and NO objects anywhere -> show "Nothing Detected"
+                val hasObjects =
+                    responses?.any { !it.localizedObjectAnnotations.isNullOrEmpty() } == true
 
-                    // grab the top label (if any) once per result
-                    val topLabel = result.labelAnnotations?.firstOrNull()
+                if (responses != null && !hasObjects) {
+                    item {
+                        Text(
+                            text = "Nothing Detected",
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                } else {
+                    var oIndex = 1
+                    responses?.forEach { result ->
+                        item {
+                            // grab the top label (if any) once per result
+                            val topLabel = result.labelAnnotations?.firstOrNull()
 
-                    result.localizedObjectAnnotations?.forEach { obj ->
-                        // 1) name
-                        Text("Name: ${obj.name}")
+                            result.localizedObjectAnnotations?.forEach { obj ->
+                                Text("Object $oIndex")
+                                // 1) name
+                                Text("Name: ${obj.name}")
 
-                        // 2) confidence
-                        val confidencePercent = (obj.score * 100).toInt()
-                        Text("Confidence: $confidencePercent%")
+                                // 2) confidence
+                                val confidencePercent = (obj.score * 100).toInt()
+                                Text("Confidence: $confidencePercent%")
 
-                        // 3) label (top 1), only if something detected
-                        topLabel?.let { label ->
-                            val labelConfidence = (label.score * 100).toInt()
-                            Text("Label: ${label.description} ($labelConfidence%)")
-                        }
+                                // 3) label (top 1), only if something detected
+                                topLabel?.let { label ->
+                                    val labelConfidence = (label.score * 100).toInt()
+                                    Text("Label: ${label.description} ($labelConfidence%)")
+                                }
 
-                        // 4) box coords coords (normalized bounding box)
-                        val verts = obj.boundingPoly.normalizedVertices
-                        val xs = verts.mapNotNull { it.x }
-                        val ys = verts.mapNotNull { it.y }
+                                // 4) box coords coords (normalized bounding box)
+                                val verts = obj.boundingPoly.normalizedVertices
+                                val xs = verts.mapNotNull { it.x }
+                                val ys = verts.mapNotNull { it.y }
 
-                        if (xs.isNotEmpty() && ys.isNotEmpty()) {
-                            val left = xs.minOrNull() ?: 0f
-                            val right = xs.maxOrNull() ?: 0f
-                            val top = ys.minOrNull() ?: 0f
-                            val bottom = ys.maxOrNull() ?: 0f
+                                if (xs.isNotEmpty() && ys.isNotEmpty()) {
+                                    val left = xs.minOrNull() ?: 0f
+                                    val right = xs.maxOrNull() ?: 0f
+                                    val top = ys.minOrNull() ?: 0f
+                                    val bottom = ys.maxOrNull() ?: 0f
 
-                            Text("Box Coordinates: left=$left, top=$top, right=$right, bottom=$bottom")
+                                    Text("Box Coordinates: left=$left, top=$top, right=$right, bottom=$bottom")
+                                }
+                                Spacer(Modifier.height(12.dp))
+                                oIndex++
+                            }
                         }
                     }
                 }
             }
         }
-
 
 
         Button(onClick = {
             navController.navigate("file_select")
-        }) {
+        },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)) {
             Text("Back")
         }
     }

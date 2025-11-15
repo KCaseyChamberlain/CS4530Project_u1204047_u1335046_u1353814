@@ -28,9 +28,13 @@ import androidx.compose.ui.graphics.asImageBitmap
 import com.example.drawingapp.shareImageFile
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.absolutePadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
@@ -111,36 +115,66 @@ fun DrawingList(repo: ImageRepository, onTimeout: () -> Unit, navController: Nav
     ) {
         items(drawings) { image ->
             val bitmap = BitmapFactory.decodeFile(image.filepath)
-            Column {
-                // image name
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                    Button(onClick = {
-                        val encodedPath = Uri.encode(image.filepath)
-                        navController.navigate("draw/$encodedPath")
-                    }) {
-                        Text(image.fileName)
-                    }
-                }
 
-                // actions
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                    Button(onClick = { shareImageFile(context, image.filepath) }) { Text("Export") }
+            val cutFileName = if (image.fileName.length > 8)
+                image.fileName.take(8) + "..."
+            else
+                image.fileName
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = image.fileName,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .padding(end = 12.dp)
+                )
+
+                Button(
+                    onClick = {
+                        val encoded = Uri.encode(image.filepath)
+                        navController.navigate("draw/$encoded")
+                    },
+                    modifier = Modifier.width(120.dp)
+                ) {
+                    Text(cutFileName)
+                }
+                Spacer(modifier = Modifier.weight(1f))
+
+                Column(
+                    horizontalAlignment = Alignment.End
+                ) {
+
+                    // Delete
                     Button(
                         onClick = { repo.deleteImage(image.id) },
-                        modifier = Modifier.padding(start = 8.dp)
+                        modifier = Modifier.width(120.dp)
                     ) { Text("Delete") }
-                }
 
-                // image
-                Row {
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = image.fileName,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
-                            .padding(8.dp)
-                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    // Export
+                    Button(
+                        onClick = { shareImageFile(context, image.filepath) },
+                        modifier = Modifier.width(120.dp)
+                    ) { Text("Export") }
+
+                    Spacer(modifier = Modifier.height(2.dp))
+                    // Analyze image
+                    Button(
+                        onClick = {
+                            val encoded = Uri.encode(image.filepath)
+                            navController.navigate("analyze/$encoded")
+                        },
+                        modifier = Modifier.width(120.dp)
+                    ) { Text("Analyze") }
                 }
             }
         }
