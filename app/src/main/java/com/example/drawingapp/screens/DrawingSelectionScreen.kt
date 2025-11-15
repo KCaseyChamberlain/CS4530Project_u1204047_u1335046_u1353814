@@ -15,7 +15,6 @@ import androidx.navigation.NavHostController
 import com.example.drawingapp.DrawingApp
 import com.example.drawingapp.ImageRepository
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Column
@@ -28,13 +27,18 @@ import androidx.compose.ui.graphics.asImageBitmap
 import com.example.drawingapp.shareImageFile
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.absolutePadding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import com.example.drawingapp.ui.theme.background
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
@@ -74,6 +78,7 @@ fun DrawingSelectionScreen(navController: NavHostController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(background)
             .padding(12.dp)
             .absolutePadding(0.dp, 20.dp, 0.dp, 0.dp),
         verticalArrangement = Arrangement.Bottom

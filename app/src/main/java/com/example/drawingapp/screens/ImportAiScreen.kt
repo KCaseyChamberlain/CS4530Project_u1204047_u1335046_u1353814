@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 
 class AiViewModel(application: Application) : AndroidViewModel(application) {
@@ -68,6 +69,19 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
     val context = LocalContext.current
     val vm: AiViewModel = viewModel()
     var isAnalyzing by remember { mutableStateOf(true) }
+
+    val objectColors = listOf(
+        Color.Red,
+        Color.Green,
+        Color.Blue,
+        Color.Magenta,
+        Color.Cyan,
+        Color.Yellow,
+        Color(0xFFFFA500), // Orange
+        Color(0xFF800080), // Purple
+        Color(0xFF00FFFF), // Aqua
+        Color(0xFFFF1493)  // DeepPink
+    )
 
     if (filePath == null) {
         Text("No image found")
@@ -113,6 +127,7 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
                 //draw each bounding box
                 responses.forEach { result ->
                     result.localizedObjectAnnotations?.forEach { obj ->
+                        val currentColor = objectColors[(objIndex - 1) % objectColors.size]
                         val verts = obj.boundingPoly.normalizedVertices
                         val xs = verts.mapNotNull { it.x }
                         val ys = verts.mapNotNull { it.y }
@@ -129,7 +144,7 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
                             val bottom = bottomNorm * size.height
 
                             drawRect(
-                                color = Color.Red,
+                                color = currentColor,
                                 topLeft = Offset(left, top),
                                 size = Size(right - left, bottom - top),
                                 style = Stroke(width = 4f)
@@ -140,7 +155,7 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
                                 left,
                                 top - 12f,
                                 android.graphics.Paint().apply {
-                                    color = android.graphics.Color.RED
+                                    color = currentColor.toArgb()
                                     textSize = 42f
                                     isFakeBoldText = true
                                 }
@@ -194,7 +209,9 @@ fun ImportAiScreen(navController: NavHostController, filePath: String?) {
 
                             //index marks which box goes to which details
                             result.localizedObjectAnnotations?.forEach { obj ->
-                                Text("Object $oIndex")
+                                val currentColor = objectColors[(oIndex - 1) % objectColors.size]
+                                Text("Object $oIndex",
+                                    color = currentColor)
                                 // 1) name
                                 Text("Name: ${obj.name}")
 
