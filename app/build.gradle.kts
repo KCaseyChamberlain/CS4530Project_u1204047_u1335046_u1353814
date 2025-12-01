@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.google.services)
 }
 //read secret API key
 val secretsFile = rootProject.file("secrets.properties")
@@ -85,6 +86,14 @@ dependencies {
 
     //genai google dependencies
     implementation(libs.google.generativeai)
+
+    //firebase dependencies
+    implementation(platform(libs.firebase.bom))          // BOM must come before Firebase libs
+    implementation(libs.firebase.auth)                   // Firebase Auth KTX
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.analytics)              // optional
+    implementation(libs.coroutines.play.services)        // coroutine support for Firebase
+
 
     implementation(libs.androidx.animation)
     implementation(libs.androidx.navigation.compose)
