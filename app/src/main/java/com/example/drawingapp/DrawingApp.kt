@@ -7,6 +7,7 @@ import kotlin.getValue
 import com.example.drawingapp.storage.ImageDao
 import com.example.drawingapp.storage.ImageEntity
 import com.example.drawingapp.storage.ImageDatabase
+import com.google.firebase.auth.FirebaseAuth
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
@@ -40,4 +41,8 @@ class DrawingApp: Application() {
     }
 
     val visionRepository by lazy { VisionRepository(client) }
+
+    val firebaseRepo by lazy {
+        FirebaseRepo(FirebaseAuth.getInstance())
+    }
 }
