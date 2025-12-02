@@ -59,10 +59,13 @@ fun DrawingSelectionScreen(navController: NavHostController) {
     val repo = app.repository
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    //login info
     val fRepo = app.firebaseRepo
     val user = fRepo.thisUser
     val userName = user?.email
 
+    //checks log out menu dropped down/up
     var menuPoppedUp by remember { mutableStateOf(false) }
 
 
@@ -100,11 +103,14 @@ fun DrawingSelectionScreen(navController: NavHostController) {
             .absolutePadding(0.dp, 20.dp, 0.dp, 0.dp),
         verticalArrangement = Arrangement.Bottom
     ) {
+        //display username,
+        //and include dropdown menu to logout
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            //keep null check so logging out doesn't crash app
             if (userName != null) {
                 Text(userName)
             }
@@ -124,8 +130,10 @@ fun DrawingSelectionScreen(navController: NavHostController) {
                 DropdownMenuItem(
                     text = { Text("Sign Out") },
                     onClick = {
+                        //sign out through firebase repo
                         fRepo.signout()
                         menuPoppedUp = false
+                        //go back to login screen
                         navController.navigate("login_screen")
                     }
                 )

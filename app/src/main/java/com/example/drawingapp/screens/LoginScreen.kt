@@ -36,11 +36,13 @@ fun LoginScreen(navController: NavHostController){
     val repo = context.firebaseRepo
     val vm = remember { AuthenticationVM(repo) }
 
+    //login information, sends to firebase
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoginMode by remember { mutableStateOf(true) }
 
     LaunchedEffect(vm.thisUser) {
+        //if we are already logged in, go directly to file selection screen
         if(vm.thisUser != null){
             navController.navigate("file_select")
         }
@@ -57,6 +59,8 @@ fun LoginScreen(navController: NavHostController){
             )
 
             Spacer(Modifier.height(20.dp))
+
+            //email and password text fields
 
             OutlinedTextField(
                 value = email,
@@ -75,6 +79,7 @@ fun LoginScreen(navController: NavHostController){
                 singleLine = true
             )
 
+            //error message or success message
             vm.message?.let {
                 Spacer(Modifier.height(10.dp))
                 Text(it, color = Color.Red)
@@ -82,6 +87,7 @@ fun LoginScreen(navController: NavHostController){
 
             Spacer(Modifier.height(24.dp))
 
+            //based on mode, either registers user or logs them in
             Button(
                 onClick = {
                     if (isLoginMode) {
@@ -108,6 +114,7 @@ fun LoginScreen(navController: NavHostController){
                 )
             }
             //for now, while firebase isn't working, bypass button
+            // we can probably remove this, but it doesn't break anything
             OutlinedButton(
                 onClick = {
                     navController.navigate("file_select") {
