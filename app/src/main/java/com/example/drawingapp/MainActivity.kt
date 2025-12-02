@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.navigation.compose.rememberNavController
 import com.example.drawingapp.ui.theme.DrawingAppTheme
-import com.example.navigationdemo.Navigation.AppNavHost
+import com.example.drawingapp.Navigation.AppNavHost
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -1,4 +1,4 @@
-package com.example.navigationdemo.Navigation
+package com.example.drawingapp.Navigation
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
@@ -11,6 +11,7 @@ import com.example.drawingapp.screens.DrawingScreen
 import com.example.drawingapp.screens.SplashScreen
 import com.example.drawingapp.screens.DrawingSelectionScreen
 import com.example.drawingapp.screens.ImportAiScreen
+import com.example.drawingapp.screens.LoginScreen
 
 @Composable
 fun AppNavHost(navController: NavHostController, startDestination: String="home")
@@ -19,6 +20,9 @@ fun AppNavHost(navController: NavHostController, startDestination: String="home"
     {
         composable("home") {
             SplashScreen(navController)
+        }
+        composable("login_screen"){
+            LoginScreen(navController)
         }
 
         composable(
