@@ -41,6 +41,17 @@ import androidx.compose.ui.platform.testTag
 import com.example.drawingapp.ui.theme.background
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material3.Divider
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun DrawingSelectionScreen(navController: NavHostController) {
@@ -48,6 +59,12 @@ fun DrawingSelectionScreen(navController: NavHostController) {
     val repo = app.repository
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val fRepo = app.firebaseRepo
+    val user = fRepo.thisUser
+    val userName = user?.email
+
+    var menuPoppedUp by remember { mutableStateOf(false) }
+
 
     //using uri, create an import launcher if the user wants to use an image from another app.
     val importLauncher = rememberLauncherForActivityResult(
@@ -83,6 +100,39 @@ fun DrawingSelectionScreen(navController: NavHostController) {
             .absolutePadding(0.dp, 20.dp, 0.dp, 0.dp),
         verticalArrangement = Arrangement.Bottom
     ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (userName != null) {
+                Text(userName)
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+
+            IconButton(onClick = { menuPoppedUp = true }) {
+                Icon(
+                    imageVector = Icons.Default.AccountCircle,
+                    contentDescription = "Account"
+                )
+            }
+
+            DropdownMenu(
+                expanded = menuPoppedUp,
+                onDismissRequest = { menuPoppedUp = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Sign Out") },
+                    onClick = {
+                        fRepo.signout()
+                        menuPoppedUp = false
+                        navController.navigate("login_screen")
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
         // Import button ABOVE "New Drawing"
         Button(
             onClick = { importLauncher.launch("image/*")},
