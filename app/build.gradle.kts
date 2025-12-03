@@ -91,6 +91,7 @@ dependencies {
     implementation(platform(libs.firebase.bom))          // BOM must come before Firebase libs
     implementation(libs.firebase.auth)                   // Firebase Auth KTX
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.storage.ktx)
     implementation(libs.firebase.analytics)              // optional
     implementation(libs.coroutines.play.services)        // coroutine support for Firebase
 

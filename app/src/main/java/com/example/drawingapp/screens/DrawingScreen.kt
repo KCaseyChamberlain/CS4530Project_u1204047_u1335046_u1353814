@@ -4,6 +4,9 @@ import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Build
+import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -47,6 +50,12 @@ import com.example.drawingapp.DrawingApp
 import java.io.File
 import java.io.FileOutputStream
 import androidx.core.graphics.createBitmap
+import com.example.drawingapp.AuthenticationVM
+import com.google.firebase.Firebase
+import com.google.firebase.storage.ktx.storage
+import com.google.firebase.storage.storage
+import java.io.ByteArrayOutputStream
+import java.util.UUID
 
 /*
 Class used for drawing data. Contains the Canvas Drawer, the bitmap storing the data,
@@ -56,6 +65,8 @@ class DrawingViewModel(application: Application) : AndroidViewModel(application)
     val canvasDrawer = CanvasDrawer(width = 1000)
     val dao=(application as DrawingApp).repository
     var bitmap = mutableStateOf(canvasDrawer.bitmap)
+
+    var imageUrl = mutableStateOf("")
     fun setBitmap(newBitmap: Bitmap) {
         canvasDrawer.setMap(newBitmap)
         bitmap.value = canvasDrawer.bitmap
@@ -65,6 +76,46 @@ class DrawingViewModel(application: Application) : AndroidViewModel(application)
         canvasDrawer.setNewMap(newBitmap)
         bitmap.value = canvasDrawer.bitmap
     }
+
+    fun bitmapToByteArray(bitmap: Bitmap, format: Bitmap.CompressFormat = Bitmap.CompressFormat.PNG, quality: Int = 100): ByteArray {
+        val stream = ByteArrayOutputStream()
+        bitmap.compress(format, quality, stream)
+        return stream.toByteArray()
+    }
+
+    fun getImageURl(context: Context, onDone: (String) -> Unit = {}) {
+        val storage = Firebase.storage("gs://drawing-app-1bc3c.firebasestorage.app")
+
+        val storageRef = storage.reference
+
+        // Convert the bitmap from the canvas drawer
+
+        val byteArray = bitmapToByteArray(canvasDrawer.bitmap)
+
+        val fileName = "${UUID.randomUUID()}.png"
+        Log.d("Upload", "Uploading to: drawings/$fileName, size=${byteArray.size}")
+        val imageRef = storageRef.child("drawings/$fileName")
+
+        val uploadTask = imageRef.putBytes(byteArray)
+
+        uploadTask
+            .addOnSuccessListener {
+                imageRef.downloadUrl
+                    .addOnSuccessListener { uri ->
+                        val url = uri.toString()
+                        imageUrl.value = url   // store in ViewModel
+
+                        onDone(url)            // callback for UI
+                    }
+                    .addOnFailureListener { e ->
+                        e.printStackTrace()
+                    }
+            }
+            .addOnFailureListener { e ->
+                e.printStackTrace()
+            }
+    }
+
 
     data class PenState(
         val color: Color = Color.Black,
@@ -119,8 +170,13 @@ private fun fitIntoSquare(
 }
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun DrawingScreen(navController: NavHostController, filePath: String? = null) {
+    val context = LocalContext.current.applicationContext as DrawingApp
+    val firebaseRepo = context.firebaseRepo
+
+
     // VM + state from VM
     val vm: DrawingViewModel = viewModel()
     val pen by vm.pen.collectAsState()
@@ -150,7 +206,10 @@ fun DrawingScreen(navController: NavHostController, filePath: String? = null) {
 
     // For the save button and it's popup
     var showSaveDialog by remember { mutableStateOf(false) }
+    var showCloudSaveDialog by remember { mutableStateOf(false) }
+
     var fileName by remember { mutableStateOf("") }
+    var myUrl by remember { mutableStateOf("") }
 
 
 
@@ -250,7 +309,15 @@ fun DrawingScreen(navController: NavHostController, filePath: String? = null) {
                     containerColor = secondary,
                     contentColor = Color.Black
                 )) {
-                Text("Save Image")
+                Text("Save Image Locally")
+            }
+
+            Button({showCloudSaveDialog = true},
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = secondary,
+                    contentColor = Color.Black
+                )) {
+                Text("Save Image in the Cloud")
             }
             Button({navController.navigate("file_select")},
                 colors = ButtonDefaults.buttonColors(
@@ -312,6 +379,45 @@ fun DrawingScreen(navController: NavHostController, filePath: String? = null) {
                     if (fileName.isNotBlank()) {
                         vm.saveImage(context, fileName)
                         showSaveDialog = false
+                    }
+                }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSaveDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showCloudSaveDialog) {
+        val context = LocalContext.current
+        AlertDialog(
+            onDismissRequest = { showCloudSaveDialog = false },
+            title = { Text("Save Drawing in the Cloud") },
+            text = {
+                Column {
+                    Text("Enter a file name:")
+                    OutlinedTextField(
+                        value = fileName,
+                        onValueChange = { fileName = it },
+                        singleLine = true,
+                        placeholder = { Text("e.g. MyDrawing1") }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    // Call saveImage() with user-entered name
+                    if (fileName.isNotBlank()) {
+                        Log.e("User info: ", (firebaseRepo.thisUser == null).toString())
+                        vm.getImageURl(context) { url ->
+                            myUrl = url
+                            firebaseRepo.saveImage(fileName, myUrl)
+                            showCloudSaveDialog = false
+                        }
                     }
                 }) {
                     Text("Save")
