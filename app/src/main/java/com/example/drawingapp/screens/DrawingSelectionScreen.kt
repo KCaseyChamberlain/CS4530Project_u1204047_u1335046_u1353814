@@ -216,6 +216,8 @@ fun DrawingSelectionScreen(navController: NavHostController) {
             }
         }
     }
+    //this lazy column and the lazy column in DrawingList are the issue
+    //something with the infinite sizing of multiple nested ones? idk
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -284,8 +286,6 @@ fun DrawingSelectionScreen(navController: NavHostController) {
             ) {
                 Text("New Drawing")
             }
-
-
             // My Cloud Images + Share
             if (user != null) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -382,7 +382,7 @@ fun DrawingSelectionScreen(navController: NavHostController) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Shared With Me (now with Import)
+                //Shared With Me (now with Import)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -543,7 +543,7 @@ fun DrawingSelectionScreen(navController: NavHostController) {
 @Composable
 fun DrawingList(
     repo: ImageRepository,
-    userId: String?,                          // <-- NEW
+    userId: String?,
     onTimeout: () -> Unit,
     navController: NavHostController
 ) {
@@ -560,7 +560,7 @@ fun DrawingList(
         modifier = Modifier
             .fillMaxSize()
             .padding(12.dp)
-            .height(200.dp)
+            .height(400.dp)
     ) {
         items(drawings) { image ->
             val bitmap = BitmapFactory.decodeFile(image.filepath)
