@@ -1,6 +1,7 @@
 package com.example.drawingapp.screens
 
 import android.R.attr.bitmap
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.compose.foundation.Image
@@ -56,6 +57,7 @@ import com.example.drawingapp.CloudDrawing
 import com.example.drawingapp.SharedDrawing
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
+import kotlinx.coroutines.withContext
 import java.net.URL
 
 @Composable
@@ -87,6 +89,9 @@ fun DrawingSelectionScreen(navController: NavHostController) {
     var shareTarget by remember { mutableStateOf<CloudDrawing?>(null) }
     var shareEmail by remember { mutableStateOf("") }
     var shareStatus by remember { mutableStateOf<String?>(null) }
+
+    // Loaded images from cloud.
+    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
 
     LaunchedEffect(user?.uid) {
         if (user != null) {
@@ -130,6 +135,29 @@ fun DrawingSelectionScreen(navController: NavHostController) {
             sharedByMe = emptyList()
         }
     }
+
+    fun loadBitmapFromUrl(
+        imageUrl: String,
+        onResult: (Bitmap?) -> Unit
+    ) {
+        // Launch a coroutine on the IO dispatcher
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val bmp = URL(imageUrl).openStream().use { BitmapFactory.decodeStream(it) }
+                // Switch back to the main thread to return the result
+                withContext(Dispatchers.Main) {
+                    onResult(bmp)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    onResult(null)
+                }
+            }
+        }
+    }
+
+
 
     // using uri, create an import launcher if the user wants to use an image from another app.
     val importLauncher = rememberLauncherForActivityResult(
@@ -269,6 +297,18 @@ fun DrawingSelectionScreen(navController: NavHostController) {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
+
+                            loadBitmapFromUrl(cloud.imageUrl) { bmp ->
+                                bitmap = bmp
+                            }
+
+                            bitmap?.asImageBitmap()?.let {
+                                Image(
+                                    it,
+                                    contentDescription = cloud.title,
+                                    modifier = Modifier.size(64.dp)
+                                )
+                            }
                             Text(
                                 text = cloud.title.ifBlank { "Untitled cloud image" },
                                 modifier = Modifier.weight(1f)
