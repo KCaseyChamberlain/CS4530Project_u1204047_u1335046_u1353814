@@ -29,10 +29,13 @@ import com.example.drawingapp.shareImageFile
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -56,7 +59,9 @@ import androidx.compose.runtime.LaunchedEffect
 import com.example.drawingapp.CloudDrawing
 import com.example.drawingapp.SharedDrawing
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.withContext
 import java.net.URL
 
@@ -211,85 +216,191 @@ fun DrawingSelectionScreen(navController: NavHostController) {
             }
         }
     }
-
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .background(background)
-            .padding(12.dp)
-            .absolutePadding(0.dp, 20.dp, 0.dp, 0.dp),
-        verticalArrangement = Arrangement.Bottom
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // display username,
-        // and include dropdown menu to logout
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
+
+    item {
+        Column(
+            modifier = Modifier
+                .background(background)
+                .padding(12.dp)
+                .absolutePadding(0.dp, 20.dp, 0.dp, 0.dp),
+            verticalArrangement = Arrangement.Bottom
         ) {
-            // keep null check so logging out doesn't crash app
-            if (userName != null) {
-                Text(userName)
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-
-            IconButton(onClick = { menuPoppedUp = true }) {
-                Icon(
-                    imageVector = Icons.Default.AccountCircle,
-                    contentDescription = "Account"
-                )
-            }
-
-            DropdownMenu(
-                expanded = menuPoppedUp,
-                onDismissRequest = { menuPoppedUp = false }
+            // display username,
+            // and include dropdown menu to logout
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                DropdownMenuItem(
-                    text = { Text("Sign Out") },
-                    onClick = {
-                        // sign out through firebase repo
-                        fRepo.signout()
-                        menuPoppedUp = false
-                        // go back to login screen
-                        navController.navigate("login_screen")
-                    }
-                )
+                // keep null check so logging out doesn't crash app
+                if (userName != null) {
+                    Text(userName)
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+
+                IconButton(onClick = { menuPoppedUp = true }) {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = "Account"
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = menuPoppedUp,
+                    onDismissRequest = { menuPoppedUp = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Sign Out") },
+                        onClick = {
+                            // sign out through firebase repo
+                            fRepo.signout()
+                            menuPoppedUp = false
+                            // go back to login screen
+                            navController.navigate("login_screen")
+                        }
+                    )
+                }
             }
-        }
 
-        Spacer(modifier = Modifier.height(20.dp))
-        // import button ABOVE "New Drawing"
-        Button(
-            onClick = { importLauncher.launch("image/*")},
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Import from Gallery")
-        }
+            Spacer(modifier = Modifier.height(4.dp))
+            // import button ABOVE "New Drawing"
+            Button(
+                onClick = { importLauncher.launch("image/*") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Import from Gallery")
+            }
 
-        Button(
-            onClick = { navController.navigate("draw/new") },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("New Drawing")
-        }
+            Button(
+                onClick = { navController.navigate("draw/new") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("New Drawing")
+            }
 
-        // My Cloud Images + Share
-        if (user != null) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("My Cloud Images")
 
-            when {
-                isCloudLoading -> {
-                    Text("Loading cloud images...")
+            // My Cloud Images + Share
+            if (user != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        "My Cloud Images",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 }
-                cloudError != null -> {
-                    Text("Error loading cloud images: $cloudError")
+
+                when {
+                    isCloudLoading -> {
+                        Text("Loading cloud images...")
+                    }
+
+                    cloudError != null -> {
+                        Text("Error loading cloud images: $cloudError")
+                    }
+
+                    cloudDrawings.isEmpty() -> {
+                        Text("No cloud images yet")
+                    }
+
+                    else -> {
+                        cloudDrawings.forEach { cloud ->
+                            //for each cloud image, display it with its name and import/share buttons
+                            var bitmap by remember(cloud.imageUrl) { mutableStateOf<Bitmap?>(null) }
+
+                            //load it once
+                            LaunchedEffect(cloud.imageUrl) {
+                                loadBitmapFromUrl(cloud.imageUrl) { loaded ->
+                                    bitmap = loaded
+                                }
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+
+
+                                bitmap?.asImageBitmap()?.let {
+                                    Image(
+                                        it,
+                                        contentDescription = cloud.title,
+                                        modifier = Modifier.size(64.dp)
+                                    )
+                                }
+                                Text(
+                                    text = cloud.title.ifBlank { "Untitled cloud image" },
+                                    modifier = Modifier.weight(1f)
+                                        .padding(12.dp)
+                                )
+                                // Import + Share buttons side by side
+                                Row {
+                                    Button(
+                                        onClick = {
+                                            importCloudImage(
+                                                cloud.imageUrl,
+                                                cloud.title.ifBlank { "CloudImage" }
+                                            )
+                                        }
+                                    ) {
+                                        Text("Import")
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Button(
+                                        onClick = {
+                                            shareTarget = cloud
+                                            shareEmail = ""
+                                            shareStatus = null
+                                        }
+                                    ) {
+                                        Text("Share")
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-                cloudDrawings.isEmpty() -> {
-                    Text("No cloud images yet")
+
+                shareStatus?.let {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(it)
                 }
-                else -> {
-                    cloudDrawings.forEach { cloud ->
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Shared With Me (now with Import)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        "Shared with Me",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                if (sharedError != null) {
+                    Text(sharedError!!)
+                } else if (sharedWithMe.isEmpty()) {
+                    Text("No images shared with you yet")
+                } else {
+                    sharedWithMe.forEach { shared ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -297,85 +408,63 @@ fun DrawingSelectionScreen(navController: NavHostController) {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-
-                            loadBitmapFromUrl(cloud.imageUrl) { bmp ->
-                                bitmap = bmp
-                            }
-
-                            bitmap?.asImageBitmap()?.let {
-                                Image(
-                                    it,
-                                    contentDescription = cloud.title,
-                                    modifier = Modifier.size(64.dp)
-                                )
-                            }
                             Text(
-                                text = cloud.title.ifBlank { "Untitled cloud image" },
+                                text = shared.title.ifBlank { "Shared image" },
                                 modifier = Modifier.weight(1f)
                             )
-                            // Import + Share buttons side by side
-                            Row {
-                                Button(
-                                    onClick = {
-                                        importCloudImage(
-                                            cloud.imageUrl,
-                                            cloud.title.ifBlank { "CloudImage" }
-                                        )
-                                    }
-                                ) {
-                                    Text("Import")
+                            Button(
+                                onClick = {
+                                    importCloudImage(
+                                        shared.imageUrl,
+                                        "SharedImage"
+                                    )
                                 }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Button(
-                                    onClick = {
-                                        shareTarget = cloud
-                                        shareEmail = ""
-                                        shareStatus = null
-                                    }
-                                ) {
-                                    Text("Share")
-                                }
+                            ) {
+                                Text("Import")
                             }
                         }
                     }
                 }
-            }
 
-            shareStatus?.let {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(it)
-            }
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Shared With Me (now with Import)
-            Text("Shared With Me")
-            if (sharedError != null) {
-                Text(sharedError!!)
-            } else if (sharedWithMe.isEmpty()) {
-                Text("No images shared with you yet")
-            } else {
-                sharedWithMe.forEach { shared ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = shared.title.ifBlank { "Shared image" },
-                            modifier = Modifier.weight(1f)
-                        )
-                        Button(
-                            onClick = {
-                                importCloudImage(
-                                    shared.imageUrl,
-                                    "SharedImage"
-                                )
-                            }
+                // Shared By Me
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        "Shared by Me",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                if (sharedByMe.isEmpty()) {
+                    Text("You haven't shared any images yet")
+                } else {
+                    sharedByMe.forEach { shared ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
                         ) {
-                            Text("Import")
+                            Text(
+                                text = "Shared with ${shared.receiverEmail}"
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Button(
+                                onClick = {
+                                    fRepo.unshareDrawing(shared.id) { ok, _ ->
+                                        if (ok) {
+                                            sharedByMe = sharedByMe.filterNot { it.id == shared.id }
+                                        }
+                                    }
+                                }
+                            ) {
+                                Text("Unshare")
+                            }
                         }
                     }
                 }
@@ -383,47 +472,15 @@ fun DrawingSelectionScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Shared By Me
-            Text("Shared By Me")
-            if (sharedByMe.isEmpty()) {
-                Text("You haven't shared any images yet")
-            } else {
-                sharedByMe.forEach { shared ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "Shared with ${shared.receiverEmail}"
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Button(
-                            onClick = {
-                                fRepo.unshareDrawing(shared.id) { ok, _ ->
-                                    if (ok) {
-                                        sharedByMe = sharedByMe.filterNot { it.id == shared.id }
-                                    }
-                                }
-                            }
-                        ) {
-                            Text("Unshare")
-                        }
-                    }
-                }
-            }
+            DrawingList(
+                repo = repo,
+                userId = user?.uid, // per user local images
+                onTimeout = { navController.navigate("file_select") },
+                navController = navController
+            )
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        DrawingList(
-            repo = repo,
-            userId = user?.uid, // per user local images
-            onTimeout = { navController.navigate("file_select") },
-            navController = navController
-        )
     }
-
+    }
     // --- Share dialog (3.2) ---
     val target = shareTarget
     if (target != null) {
@@ -503,6 +560,7 @@ fun DrawingList(
         modifier = Modifier
             .fillMaxSize()
             .padding(12.dp)
+            .height(200.dp)
     ) {
         items(drawings) { image ->
             val bitmap = BitmapFactory.decodeFile(image.filepath)

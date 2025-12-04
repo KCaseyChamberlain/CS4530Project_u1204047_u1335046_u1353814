@@ -74,6 +74,8 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
+    implementation(libs.androidx.foundation.layout)
+    implementation(libs.androidx.foundation)
     ksp(libs.room.compiler)
 
     //ktor dependencies
