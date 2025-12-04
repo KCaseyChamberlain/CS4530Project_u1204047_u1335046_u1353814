@@ -13,6 +13,14 @@ data class CloudDrawing(
     val timestamp: Long
 )
 
+data class SharedDrawing(
+    val id: String,
+    val imageUrl: String,
+    val senderId: String,
+    val receiverEmail: String,
+    val timestamp: Long
+)
+
 class FirebaseRepo(private val auth: FirebaseAuth) {
 
     private val db = Firebase.firestore
@@ -37,6 +45,7 @@ class FirebaseRepo(private val auth: FirebaseAuth) {
         auth.signOut()
     }
 
+    // save a cloud backup of an image
     fun saveImage(title: String, imageUrl: String) {
         val user = thisUser
         if (user == null) {
@@ -74,7 +83,6 @@ class FirebaseRepo(private val auth: FirebaseAuth) {
         db.collection("user_drawings")
             .whereEqualTo("userId", user.uid)
             .get()
-
             .addOnSuccessListener { snapshot ->
                 val drawings = snapshot.documents.mapNotNull { doc ->
                     val imageUrl = doc.getString("imageUrl")
@@ -96,6 +104,132 @@ class FirebaseRepo(private val auth: FirebaseAuth) {
             }
             .addOnFailureListener { e ->
                 onError(e)
+            }
+    }
+
+    // share a drawing with another user by email
+    fun shareDrawing(
+        imageUrl: String,
+        receiverEmail: String,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        val user = thisUser
+        if (user == null) {
+            onComplete(false, "User not logged in")
+            return
+        }
+
+        val data = hashMapOf(
+            "imageUrl" to imageUrl,
+            "senderId" to user.uid,
+            "receiverEmail" to receiverEmail.trim().lowercase(),
+            "timestamp" to System.currentTimeMillis()
+        )
+
+        db.collection("shared_drawings")
+            .add(data)
+            .addOnSuccessListener {
+                onComplete(true, null)
+            }
+            .addOnFailureListener { e ->
+                onComplete(false, e.message)
+            }
+    }
+
+    // list drawings I have shared
+    fun getSharedByMe(
+        onResult: (List<SharedDrawing>) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        val user = thisUser
+        if (user == null) {
+            onError(IllegalStateException("User not logged in"))
+            return
+        }
+
+        db.collection("shared_drawings")
+            .whereEqualTo("senderId", user.uid)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val list = snapshot.documents.mapNotNull { doc ->
+                    val imageUrl = doc.getString("imageUrl")
+                    val senderId = doc.getString("senderId")
+                    val receiverEmail = doc.getString("receiverEmail")
+                    val timestamp = doc.getLong("timestamp") ?: 0L
+
+                    if (imageUrl == null || senderId == null || receiverEmail == null) {
+                        null
+                    } else {
+                        SharedDrawing(
+                            id = doc.id,
+                            imageUrl = imageUrl,
+                            senderId = senderId,
+                            receiverEmail = receiverEmail,
+                            timestamp = timestamp
+                        )
+                    }
+                }
+                onResult(list)
+            }
+            .addOnFailureListener { e ->
+                onError(e)
+            }
+    }
+
+    // list drawings shared *to* me
+    fun getSharedWithMe(
+        onResult: (List<SharedDrawing>) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        val user = thisUser
+        val email = user?.email?.trim()?.lowercase()
+        if (email == null) {
+            onError(IllegalStateException("User not logged in or email missing"))
+            return
+        }
+
+        db.collection("shared_drawings")
+            .whereEqualTo("receiverEmail", email)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val list = snapshot.documents.mapNotNull { doc ->
+                    val imageUrl = doc.getString("imageUrl")
+                    val senderId = doc.getString("senderId")
+                    val receiverEmail = doc.getString("receiverEmail")
+                    val timestamp = doc.getLong("timestamp") ?: 0L
+
+                    if (imageUrl == null || senderId == null || receiverEmail == null) {
+                        null
+                    } else {
+                        SharedDrawing(
+                            id = doc.id,
+                            imageUrl = imageUrl,
+                            senderId = senderId,
+                            receiverEmail = receiverEmail,
+                            timestamp = timestamp
+                        )
+                    }
+                }
+                onResult(list)
+            }
+            .addOnFailureListener { e ->
+                onError(e)
+            }
+    }
+
+    // unshare (delete a shared_drawings doc)
+    fun unshareDrawing(
+        sharedId: String,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        db.collection("shared_drawings")
+            .document(sharedId)
+            .delete()
+            .addOnSuccessListener {
+                onComplete(true, null)
+            }
+            .addOnFailureListener { e ->
+                onComplete(false, e.message)
             }
     }
 }

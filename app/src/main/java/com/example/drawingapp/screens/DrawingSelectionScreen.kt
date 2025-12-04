@@ -53,6 +53,9 @@ import androidx.compose.runtime.setValue
 import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.runtime.LaunchedEffect
 import com.example.drawingapp.CloudDrawing
+import com.example.drawingapp.SharedDrawing
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 
 @Composable
 fun DrawingSelectionScreen(navController: NavHostController) {
@@ -69,13 +72,24 @@ fun DrawingSelectionScreen(navController: NavHostController) {
     //checks log out menu dropped down/up
     var menuPoppedUp by remember { mutableStateOf(false) }
 
-    // --- Cloud drawings state ---
+    // --- Cloud drawings state (3.1) ---
     var cloudDrawings by remember { mutableStateOf<List<CloudDrawing>>(emptyList()) }
     var isCloudLoading by remember { mutableStateOf(false) }
     var cloudError by remember { mutableStateOf<String?>(null) }
 
+    // --- Sharing state (3.2) ---
+    var sharedWithMe by remember { mutableStateOf<List<SharedDrawing>>(emptyList()) }
+    var sharedByMe by remember { mutableStateOf<List<SharedDrawing>>(emptyList()) }
+    var sharedError by remember { mutableStateOf<String?>(null) }
+
+    // share dialog state
+    var shareTarget by remember { mutableStateOf<CloudDrawing?>(null) }
+    var shareEmail by remember { mutableStateOf("") }
+    var shareStatus by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(user?.uid) {
         if (user != null) {
+            // load my cloud images
             isCloudLoading = true
             cloudError = null
             fRepo.getUserDrawings(
@@ -88,8 +102,31 @@ fun DrawingSelectionScreen(navController: NavHostController) {
                     isCloudLoading = false
                 }
             )
+
+            // load images shared WITH me
+            sharedError = null
+            fRepo.getSharedWithMe(
+                onResult = { list ->
+                    sharedWithMe = list
+                },
+                onError = {
+                    sharedError = "Could not load shared images."
+                }
+            )
+
+            // load images shared BY me
+            fRepo.getSharedByMe(
+                onResult = { list ->
+                    sharedByMe = list
+                },
+                onError = {
+                    sharedError = "Could not load shared images."
+                }
+            )
         } else {
             cloudDrawings = emptyList()
+            sharedWithMe = emptyList()
+            sharedByMe = emptyList()
         }
     }
 
@@ -180,7 +217,7 @@ fun DrawingSelectionScreen(navController: NavHostController) {
             Text("New Drawing")
         }
 
-        // --- My Cloud Images (minimal display) ---
+        // --- My Cloud Images + Share (3.1 + 3.2) ---
         if (user != null) {
             Spacer(modifier = Modifier.height(16.dp))
             Text("My Cloud Images")
@@ -197,10 +234,83 @@ fun DrawingSelectionScreen(navController: NavHostController) {
                 }
                 else -> {
                     cloudDrawings.forEach { cloud ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = cloud.title.ifBlank { "Untitled cloud image" },
+                                modifier = Modifier.weight(1f)
+                            )
+                            Button(
+                                onClick = {
+                                    shareTarget = cloud
+                                    shareEmail = ""
+                                    shareStatus = null
+                                }
+                            ) {
+                                Text("Share")
+                            }
+                        }
+                    }
+                }
+            }
+
+            shareStatus?.let {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(it)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Shared With Me
+            Text("Shared With Me")
+            if (sharedError != null) {
+                Text(sharedError!!)
+            } else if (sharedWithMe.isEmpty()) {
+                Text("No images shared with you yet")
+            } else {
+                sharedWithMe.forEachIndexed { index, _ ->
+                    Text(
+                        text = "Shared image #${index + 1}",
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Shared By Me
+            Text("Shared By Me")
+            if (sharedByMe.isEmpty()) {
+                Text("You haven't shared any images yet")
+            } else {
+                sharedByMe.forEach { shared ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         Text(
-                            text = cloud.title.ifBlank { "Untitled cloud image" },
-                            modifier = Modifier.padding(vertical = 2.dp)
+                            text = "Shared with ${shared.receiverEmail}",
+                            modifier = Modifier.weight(1f)
                         )
+                        Button(
+                            onClick = {
+                                fRepo.unshareDrawing(shared.id) { ok, _ ->
+                                    if (ok) {
+                                        sharedByMe = sharedByMe.filterNot { it.id == shared.id }
+                                    }
+                                }
+                            }
+                        ) {
+                            Text("Unshare")
+                        }
                     }
                 }
             }
@@ -212,6 +322,63 @@ fun DrawingSelectionScreen(navController: NavHostController) {
             repo,
             onTimeout = { navController.navigate("file_select") },
             navController
+        )
+    }
+
+    // --- Share dialog (3.2) ---
+    val target = shareTarget
+    if (target != null) {
+        AlertDialog(
+            onDismissRequest = { shareTarget = null },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val trimmed = shareEmail.trim()
+                        if (trimmed.isNotEmpty()) {
+                            fRepo.shareDrawing(
+                                imageUrl = target.imageUrl,
+                                receiverEmail = trimmed
+                            ) { ok, msg ->
+                                if (ok) {
+                                    shareStatus = "Shared with $trimmed"
+
+                                    // refresh "Shared By Me" list after a successful share
+                                    fRepo.getSharedByMe(
+                                        onResult = { list -> sharedByMe = list },
+                                        onError = {
+                                            // optional: you could set sharedError here if you want
+                                            // sharedError = "Could not refresh shared images."
+                                        }
+                                    )
+                                } else {
+                                    shareStatus = "Failed to share: ${msg ?: "unknown error"}"
+                                }
+                            }
+                        }
+                        shareTarget = null
+                    }
+                ) {
+                    Text("Share")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { shareTarget = null }) {
+                    Text("Cancel")
+                }
+            },
+            title = { Text("Share drawing") },
+            text = {
+                Column {
+                    Text("Enter recipient email:")
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = shareEmail,
+                        onValueChange = { shareEmail = it },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
         )
     }
 }
