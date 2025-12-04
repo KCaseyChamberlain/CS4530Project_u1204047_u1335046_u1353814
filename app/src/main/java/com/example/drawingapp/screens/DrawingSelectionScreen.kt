@@ -560,7 +560,7 @@ fun DrawingList(
         modifier = Modifier
             .fillMaxSize()
             .padding(12.dp)
-            .height(400.dp)
+            .height(1200.dp)
     ) {
         items(drawings) { image ->
             val bitmap = BitmapFactory.decodeFile(image.filepath)
