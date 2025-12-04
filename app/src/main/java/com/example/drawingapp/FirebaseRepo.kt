@@ -1,49 +1,101 @@
 package com.example.drawingapp
 
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import java.time.LocalDateTime
 
-class FirebaseRepo(private val auth : FirebaseAuth) {
+data class CloudDrawing(
+    val id: String,
+    val imageUrl: String,
+    val title: String,
+    val timestamp: Long
+)
+
+class FirebaseRepo(private val auth: FirebaseAuth) {
+
     private val db = Firebase.firestore
-    fun registerUser(email: String, password: String, onResult: (Boolean, String?) -> Unit){
+
+    val thisUser get() = auth.currentUser
+
+    fun registerUser(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { done ->
                 onResult(done.isSuccessful, done.exception?.message)
             }
     }
-    fun login(email: String, password: String, onResult: (Boolean, String?) -> Unit){
+
+    fun login(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener { done ->
                 onResult(done.isSuccessful, done.exception?.message)
             }
     }
-    fun signout(){
+
+    fun signout() {
         auth.signOut()
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun saveImage(title: String, image: String){
+    fun saveImage(title: String, imageUrl: String) {
+        val user = thisUser
+        if (user == null) {
+            Log.e("FirebaseRepo", "Tried to save image with no logged-in user")
+            return
+        }
+
         val newData = hashMapOf(
-            "User: " to thisUser?.uid,
-            "imageUrl: " to image,
-            "Timestamp: " to LocalDateTime.now().toString(),
-            "Title: " to title
+            "userId" to user.uid,
+            "imageUrl" to imageUrl,
+            "timestamp" to System.currentTimeMillis(),
+            "title" to title
         )
 
         db.collection("user_drawings")
             .add(newData)
-            .addOnSuccessListener {
-                Log.e("Success", "Data saved with ID: ${it.id}")
+            .addOnSuccessListener { doc ->
+                Log.d("FirebaseRepo", "Cloud image saved with ID: ${doc.id}")
             }
             .addOnFailureListener { e ->
-                Log.e("Failure", "Error saving data: ${e.message}")
+                Log.e("FirebaseRepo", "Error saving cloud image: ${e.message}")
             }
     }
-    val thisUser get() = auth.currentUser
+
+    fun getUserDrawings(
+        onResult: (List<CloudDrawing>) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        val user = thisUser
+        if (user == null) {
+            onError(IllegalStateException("User not logged in"))
+            return
+        }
+
+        db.collection("user_drawings")
+            .whereEqualTo("userId", user.uid)
+            .get()
+
+            .addOnSuccessListener { snapshot ->
+                val drawings = snapshot.documents.mapNotNull { doc ->
+                    val imageUrl = doc.getString("imageUrl")
+                    val title = doc.getString("title") ?: ""
+                    val timestamp = doc.getLong("timestamp") ?: 0L
+
+                    if (imageUrl == null) {
+                        null
+                    } else {
+                        CloudDrawing(
+                            id = doc.id,
+                            imageUrl = imageUrl,
+                            title = title,
+                            timestamp = timestamp
+                        )
+                    }
+                }
+                onResult(drawings)
+            }
+            .addOnFailureListener { e ->
+                onError(e)
+            }
+    }
 }

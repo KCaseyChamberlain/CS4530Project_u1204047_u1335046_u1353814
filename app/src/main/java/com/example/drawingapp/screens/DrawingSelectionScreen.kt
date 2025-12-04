@@ -30,7 +30,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.absolutePadding
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import kotlinx.coroutines.launch
@@ -52,6 +51,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.runtime.LaunchedEffect
+import com.example.drawingapp.CloudDrawing
 
 @Composable
 fun DrawingSelectionScreen(navController: NavHostController) {
@@ -68,6 +69,29 @@ fun DrawingSelectionScreen(navController: NavHostController) {
     //checks log out menu dropped down/up
     var menuPoppedUp by remember { mutableStateOf(false) }
 
+    // --- Cloud drawings state ---
+    var cloudDrawings by remember { mutableStateOf<List<CloudDrawing>>(emptyList()) }
+    var isCloudLoading by remember { mutableStateOf(false) }
+    var cloudError by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(user?.uid) {
+        if (user != null) {
+            isCloudLoading = true
+            cloudError = null
+            fRepo.getUserDrawings(
+                onResult = { list ->
+                    cloudDrawings = list
+                    isCloudLoading = false
+                },
+                onError = { e ->
+                    cloudError = e.message ?: "Unknown error"
+                    isCloudLoading = false
+                }
+            )
+        } else {
+            cloudDrawings = emptyList()
+        }
+    }
 
     //using uri, create an import launcher if the user wants to use an image from another app.
     val importLauncher = rememberLauncherForActivityResult(
@@ -156,6 +180,34 @@ fun DrawingSelectionScreen(navController: NavHostController) {
             Text("New Drawing")
         }
 
+        // --- My Cloud Images (minimal display) ---
+        if (user != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("My Cloud Images")
+
+            when {
+                isCloudLoading -> {
+                    Text("Loading cloud images...")
+                }
+                cloudError != null -> {
+                    Text("Error loading cloud images: $cloudError")
+                }
+                cloudDrawings.isEmpty() -> {
+                    Text("No cloud images yet")
+                }
+                else -> {
+                    cloudDrawings.forEach { cloud ->
+                        Text(
+                            text = cloud.title.ifBlank { "Untitled cloud image" },
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         DrawingList(
             repo,
             onTimeout = { navController.navigate("file_select") },
@@ -164,11 +216,10 @@ fun DrawingSelectionScreen(navController: NavHostController) {
     }
 }
 
-
 @Composable
 fun DrawingList(repo: ImageRepository, onTimeout: () -> Unit, navController: NavHostController){
     val drawings by repo.allImages.collectAsState(initial = emptyList())
-    val context = LocalContext.current   // <— ADD THIS
+    val context = LocalContext.current
 
     //Lazy Column contains a list of all drawings, with
     // buttons to export, delete, and edit each image.
