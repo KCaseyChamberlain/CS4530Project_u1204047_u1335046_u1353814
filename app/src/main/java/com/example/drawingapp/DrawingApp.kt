@@ -25,8 +25,9 @@ class DrawingApp: Application() {
             applicationContext,
             ImageDatabase::class.java,
             "drawing_DB"
-        ).build()
-        //).fallbackToDestructiveMigration().build()
+        )
+        .fallbackToDestructiveMigration()   // wipe old DB on schema change
+        .build()
     }
 
     //establish repository when called

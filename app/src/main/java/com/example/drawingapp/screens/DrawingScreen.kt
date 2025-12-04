@@ -142,8 +142,8 @@ class DrawingViewModel(application: Application) : AndroidViewModel(application)
     fun endStroke() = canvasDrawer.resetLine()
     fun clear() = canvasDrawer.clear()
 
-    fun saveImage(context : Context, fileName: String) {
-        dao.saveImage(context, canvasDrawer.bitmap, fileName) { savedPath -> }
+    fun saveImage(context: Context, fileName: String, ownerId: String?) {
+        dao.saveImage(context, canvasDrawer.bitmap, fileName, ownerId) { _ -> }
     }
 }
 
@@ -358,7 +358,7 @@ fun DrawingScreen(navController: NavHostController, filePath: String? = null) {
 
     // Popup for the save button.
     if (showSaveDialog) {
-        val context = LocalContext.current
+        val ctx = LocalContext.current
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
             title = { Text("Save Drawing") },
@@ -377,7 +377,11 @@ fun DrawingScreen(navController: NavHostController, filePath: String? = null) {
                 TextButton(onClick = {
                     // Call saveImage() with user-entered name
                     if (fileName.isNotBlank()) {
-                        vm.saveImage(context, fileName)
+                        vm.saveImage(
+                            ctx,
+                            fileName,
+                            firebaseRepo.thisUser?.uid   // pass ownerId
+                        )
                         showSaveDialog = false
                     }
                 }) {

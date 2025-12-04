@@ -65,20 +65,20 @@ fun DrawingSelectionScreen(navController: NavHostController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    //login info
+    // login info
     val fRepo = app.firebaseRepo
     val user = fRepo.thisUser
     val userName = user?.email
 
-    //checks log out menu dropped down/up
+    // checks log out menu dropped down/up
     var menuPoppedUp by remember { mutableStateOf(false) }
 
-    // --- Cloud drawings state (3.1) ---
+    // cloud drawings state
     var cloudDrawings by remember { mutableStateOf<List<CloudDrawing>>(emptyList()) }
     var isCloudLoading by remember { mutableStateOf(false) }
     var cloudError by remember { mutableStateOf<String?>(null) }
 
-    // --- Sharing state (3.2) ---
+    // sharing state
     var sharedWithMe by remember { mutableStateOf<List<SharedDrawing>>(emptyList()) }
     var sharedByMe by remember { mutableStateOf<List<SharedDrawing>>(emptyList()) }
     var sharedError by remember { mutableStateOf<String?>(null) }
@@ -131,7 +131,7 @@ fun DrawingSelectionScreen(navController: NavHostController) {
         }
     }
 
-    //using uri, create an import launcher if the user wants to use an image from another app.
+    // using uri, create an import launcher if the user wants to use an image from another app.
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri ->
@@ -139,12 +139,13 @@ fun DrawingSelectionScreen(navController: NavHostController) {
             context.contentResolver.openInputStream(uri)?.use { input ->
                 val bmp = BitmapFactory.decodeStream(input)
                 if (bmp != null) {
-                    // Save into app storage + DB, then it appears in the list
+                    // save into app storage + DB, then it appears in the list
                     scope.launch {
                         repo.saveImage(
                             context,
                             bmp,
-                            "Imported_${System.currentTimeMillis()}"
+                            "Imported_${System.currentTimeMillis()}",
+                            user?.uid // tag with ownerId
                         ) { savedPath ->
                             val encodedPath = Uri.encode(savedPath)
                             CoroutineScope(Dispatchers.Main).launch {
@@ -167,7 +168,8 @@ fun DrawingSelectionScreen(navController: NavHostController) {
                         repo.saveImage(
                             context,
                             bmp,
-                            defaultTitle
+                            defaultTitle,
+                            user?.uid              // <-- tag imported cloud image with ownerId
                         ) { savedPath ->
                             CoroutineScope(Dispatchers.Main).launch {
                                 val encoded = Uri.encode(savedPath)
@@ -190,14 +192,14 @@ fun DrawingSelectionScreen(navController: NavHostController) {
             .absolutePadding(0.dp, 20.dp, 0.dp, 0.dp),
         verticalArrangement = Arrangement.Bottom
     ) {
-        //display username,
-        //and include dropdown menu to logout
+        // display username,
+        // and include dropdown menu to logout
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            //keep null check so logging out doesn't crash app
+            // keep null check so logging out doesn't crash app
             if (userName != null) {
                 Text(userName)
             }
@@ -217,10 +219,10 @@ fun DrawingSelectionScreen(navController: NavHostController) {
                 DropdownMenuItem(
                     text = { Text("Sign Out") },
                     onClick = {
-                        //sign out through firebase repo
+                        // sign out through firebase repo
                         fRepo.signout()
                         menuPoppedUp = false
-                        //go back to login screen
+                        // go back to login screen
                         navController.navigate("login_screen")
                     }
                 )
@@ -228,7 +230,7 @@ fun DrawingSelectionScreen(navController: NavHostController) {
         }
 
         Spacer(modifier = Modifier.height(20.dp))
-        // Import button ABOVE "New Drawing"
+        // import button ABOVE "New Drawing"
         Button(
             onClick = { importLauncher.launch("image/*")},
             modifier = Modifier.fillMaxWidth()
@@ -243,7 +245,7 @@ fun DrawingSelectionScreen(navController: NavHostController) {
             Text("New Drawing")
         }
 
-        // --- My Cloud Images + Share (3.1 + 3.2 + 4.0 import) ---
+        // My Cloud Images + Share
         if (user != null) {
             Spacer(modifier = Modifier.height(16.dp))
             Text("My Cloud Images")
@@ -322,7 +324,7 @@ fun DrawingSelectionScreen(navController: NavHostController) {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Shared image",
+                            text = shared.title.ifBlank { "Shared image" },
                             modifier = Modifier.weight(1f)
                         )
                         Button(
@@ -375,9 +377,10 @@ fun DrawingSelectionScreen(navController: NavHostController) {
         Spacer(modifier = Modifier.height(16.dp))
 
         DrawingList(
-            repo,
+            repo = repo,
+            userId = user?.uid, // per user local images
             onTimeout = { navController.navigate("file_select") },
-            navController
+            navController = navController
         )
     }
 
@@ -393,6 +396,7 @@ fun DrawingSelectionScreen(navController: NavHostController) {
                         if (trimmed.isNotEmpty()) {
                             fRepo.shareDrawing(
                                 imageUrl = target.imageUrl,
+                                title = target.title,
                                 receiverEmail = trimmed
                             ) { ok, msg ->
                                 if (ok) {
@@ -440,15 +444,25 @@ fun DrawingSelectionScreen(navController: NavHostController) {
 }
 
 @Composable
-fun DrawingList(repo: ImageRepository, onTimeout: () -> Unit, navController: NavHostController){
-    val drawings by repo.allImages.collectAsState(initial = emptyList())
+fun DrawingList(
+    repo: ImageRepository,
+    userId: String?,                          // <-- NEW
+    onTimeout: () -> Unit,
+    navController: NavHostController
+) {
+    val drawings by if (userId != null) {
+        repo.imagesForUser(userId).collectAsState(initial = emptyList())
+    } else {
+        repo.imagesForNoUser().collectAsState(initial = emptyList())
+    }
     val context = LocalContext.current
 
     //Lazy Column contains a list of all drawings, with
     // buttons to export, delete, and edit each image.
-    LazyColumn (modifier = Modifier
-        .fillMaxSize()
-        .padding(12.dp)
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(12.dp)
     ) {
         items(drawings) { image ->
             val bitmap = BitmapFactory.decodeFile(image.filepath)

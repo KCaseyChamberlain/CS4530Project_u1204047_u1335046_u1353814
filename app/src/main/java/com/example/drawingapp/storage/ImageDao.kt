@@ -18,11 +18,13 @@ interface ImageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFile(file : ImageEntity)
 
-    /*
-    Gets all image entities from the db
-     */
-    @Query("SELECT * FROM images ORDER BY id desc")
-    fun getAllImages(): Flow<List<ImageEntity>>
+    // images for a logged-in user
+    @Query("SELECT * FROM images WHERE ownerId = :ownerId ORDER BY id DESC")
+    fun getImagesForUser(ownerId: String): Flow<List<ImageEntity>>
+
+    // images saved when no user is logged in (ownerId IS NULL)
+    @Query("SELECT * FROM images WHERE ownerId IS NULL ORDER BY id DESC")
+    fun getImagesForNoUser(): Flow<List<ImageEntity>>
 
     // Temporary only for debugging
     @Query("DELETE FROM images")

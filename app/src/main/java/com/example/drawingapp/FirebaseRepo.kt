@@ -16,6 +16,7 @@ data class CloudDrawing(
 data class SharedDrawing(
     val id: String,
     val imageUrl: String,
+    val title: String,
     val senderId: String,
     val receiverEmail: String,
     val timestamp: Long
@@ -110,6 +111,7 @@ class FirebaseRepo(private val auth: FirebaseAuth) {
     // share a drawing with another user by email
     fun shareDrawing(
         imageUrl: String,
+        title: String,
         receiverEmail: String,
         onComplete: (Boolean, String?) -> Unit
     ) {
@@ -121,6 +123,7 @@ class FirebaseRepo(private val auth: FirebaseAuth) {
 
         val data = hashMapOf(
             "imageUrl" to imageUrl,
+            "title" to title,
             "senderId" to user.uid,
             "receiverEmail" to receiverEmail.trim().lowercase(),
             "timestamp" to System.currentTimeMillis()
@@ -153,6 +156,7 @@ class FirebaseRepo(private val auth: FirebaseAuth) {
             .addOnSuccessListener { snapshot ->
                 val list = snapshot.documents.mapNotNull { doc ->
                     val imageUrl = doc.getString("imageUrl")
+                    val title = doc.getString("title") ?: ""
                     val senderId = doc.getString("senderId")
                     val receiverEmail = doc.getString("receiverEmail")
                     val timestamp = doc.getLong("timestamp") ?: 0L
@@ -163,6 +167,7 @@ class FirebaseRepo(private val auth: FirebaseAuth) {
                         SharedDrawing(
                             id = doc.id,
                             imageUrl = imageUrl,
+                            title = title,
                             senderId = senderId,
                             receiverEmail = receiverEmail,
                             timestamp = timestamp
@@ -194,6 +199,7 @@ class FirebaseRepo(private val auth: FirebaseAuth) {
             .addOnSuccessListener { snapshot ->
                 val list = snapshot.documents.mapNotNull { doc ->
                     val imageUrl = doc.getString("imageUrl")
+                    val title = doc.getString("title") ?: ""
                     val senderId = doc.getString("senderId")
                     val receiverEmail = doc.getString("receiverEmail")
                     val timestamp = doc.getLong("timestamp") ?: 0L
@@ -204,6 +210,7 @@ class FirebaseRepo(private val auth: FirebaseAuth) {
                         SharedDrawing(
                             id = doc.id,
                             imageUrl = imageUrl,
+                            title = title,
                             senderId = senderId,
                             receiverEmail = receiverEmail,
                             timestamp = timestamp

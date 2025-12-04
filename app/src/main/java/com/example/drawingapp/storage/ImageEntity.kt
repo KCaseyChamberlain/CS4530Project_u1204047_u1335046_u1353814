@@ -10,5 +10,6 @@ the drawing), and uses an id as the primary key.
 data class ImageEntity(
     val filepath: String,
     val fileName:String = "",
+    val ownerId: String? = null,
     @PrimaryKey(autoGenerate = true)
     val id:Int = 0)
