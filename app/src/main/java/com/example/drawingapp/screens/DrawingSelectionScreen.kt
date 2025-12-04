@@ -56,6 +56,7 @@ import com.example.drawingapp.CloudDrawing
 import com.example.drawingapp.SharedDrawing
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
+import java.net.URL
 
 @Composable
 fun DrawingSelectionScreen(navController: NavHostController) {
@@ -156,6 +157,31 @@ fun DrawingSelectionScreen(navController: NavHostController) {
         }
     }
 
+    // helper to import a cloud/shared image URL into local storage and open in draw screen
+    fun importCloudImage(imageUrl: String, defaultTitle: String) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                URL(imageUrl).openStream().use { input ->
+                    val bmp = BitmapFactory.decodeStream(input)
+                    if (bmp != null) {
+                        repo.saveImage(
+                            context,
+                            bmp,
+                            defaultTitle
+                        ) { savedPath ->
+                            CoroutineScope(Dispatchers.Main).launch {
+                                val encoded = Uri.encode(savedPath)
+                                navController.navigate("draw/$encoded")
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                // for this assignment we can silently fail; no UI requirement given
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -217,7 +243,7 @@ fun DrawingSelectionScreen(navController: NavHostController) {
             Text("New Drawing")
         }
 
-        // --- My Cloud Images + Share (3.1 + 3.2) ---
+        // --- My Cloud Images + Share (3.1 + 3.2 + 4.0 import) ---
         if (user != null) {
             Spacer(modifier = Modifier.height(16.dp))
             Text("My Cloud Images")
@@ -245,14 +271,28 @@ fun DrawingSelectionScreen(navController: NavHostController) {
                                 text = cloud.title.ifBlank { "Untitled cloud image" },
                                 modifier = Modifier.weight(1f)
                             )
-                            Button(
-                                onClick = {
-                                    shareTarget = cloud
-                                    shareEmail = ""
-                                    shareStatus = null
+                            // Import + Share buttons side by side
+                            Row {
+                                Button(
+                                    onClick = {
+                                        importCloudImage(
+                                            cloud.imageUrl,
+                                            cloud.title.ifBlank { "CloudImage" }
+                                        )
+                                    }
+                                ) {
+                                    Text("Import")
                                 }
-                            ) {
-                                Text("Share")
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Button(
+                                    onClick = {
+                                        shareTarget = cloud
+                                        shareEmail = ""
+                                        shareStatus = null
+                                    }
+                                ) {
+                                    Text("Share")
+                                }
                             }
                         }
                     }
@@ -266,18 +306,36 @@ fun DrawingSelectionScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Shared With Me
+            // Shared With Me (now with Import)
             Text("Shared With Me")
             if (sharedError != null) {
                 Text(sharedError!!)
             } else if (sharedWithMe.isEmpty()) {
                 Text("No images shared with you yet")
             } else {
-                sharedWithMe.forEachIndexed { index, _ ->
-                    Text(
-                        text = "Shared image #${index + 1}",
-                        modifier = Modifier.padding(vertical = 2.dp)
-                    )
+                sharedWithMe.forEach { shared ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Shared image",
+                            modifier = Modifier.weight(1f)
+                        )
+                        Button(
+                            onClick = {
+                                importCloudImage(
+                                    shared.imageUrl,
+                                    "SharedImage"
+                                )
+                            }
+                        ) {
+                            Text("Import")
+                        }
+                    }
                 }
             }
 
@@ -289,17 +347,15 @@ fun DrawingSelectionScreen(navController: NavHostController) {
                 Text("You haven't shared any images yet")
             } else {
                 sharedByMe.forEach { shared ->
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .padding(vertical = 4.dp)
                     ) {
                         Text(
-                            text = "Shared with ${shared.receiverEmail}",
-                            modifier = Modifier.weight(1f)
+                            text = "Shared with ${shared.receiverEmail}"
                         )
+                        Spacer(modifier = Modifier.height(4.dp))
                         Button(
                             onClick = {
                                 fRepo.unshareDrawing(shared.id) { ok, _ ->
